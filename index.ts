@@ -21,6 +21,20 @@ const il2cpp_hook = ()=>{
         .and()
         .attach()
 }
+
+const parseLevelAsset = (levelAsset:Il2Cpp.Object) =>{
+
+    return {
+
+    ID              : (levelAsset.field('ID'             ).value as Il2Cpp.String).toString(),
+    AssetsType      : levelAsset.field('AssetsType'     ).value,
+    Level           : levelAsset.field('Level'          ).value,
+    StorageABPath   : (levelAsset.field('StorageABPath'  ).value as Il2Cpp.String).toString(),
+    LocalABPath     : levelAsset.field('LocalABPath'    ).value,
+    _generationCode : levelAsset.field('_generationCode').value,
+    }
+}
+
 const parseLevelData = (levelData:Il2Cpp.Object)=>{
     const ID            = levelData.field("ID"          ).value;
     const DiffCount     = levelData.field('DiffCount'   ).value;
@@ -93,7 +107,28 @@ const dumpLevelManager = ()=>{
     console.log(`Level cost time: ${levelManager.method('get_LevelCostTime').invoke()}`)
     console.log(`Actually game time: ${levelManager.method('get_ActuallyGameTime').invoke()}`)
 
+    console.log(`Level asset: ${JSON.stringify(parseLevelAsset(levelManager.field('LevelAsset').value as Il2Cpp.Object))}`)
 
+
+
+}
+
+const dumpUserInfoMangaer = ()=>{
+    const UserInfoManager = Il2Cpp.domain.assembly("Assembly-CSharp").image
+        .class("UserInfoManager");
+
+    console.log(`Level: ${UserInfoManager.method('get_level').invoke()}`)
+    console.log(`Chest finish level: ${UserInfoManager.method('get_chest_finish_level').invoke()}`)
+
+    const userInfoManager = UserInfoManager.method("get_Instance").invoke() as Il2Cpp.Object;
+
+    console.log(`Gold: ${userInfoManager.method("get_Gold").invoke()}`)
+    console.log(`Level: ${userInfoManager.method("get_Level").invoke()}`)
+    console.log(`Special level: ${userInfoManager.method("get_SpecialLevel").invoke()}`)
+    console.log(`Is no use task button: ${userInfoManager.method("get_IsNoUseTaskButton").invoke()}`)
+
+    const userData = userInfoManager.method('get_Data').invoke() as Il2Cpp.Object;
+    console.log(`Userdata: ${userData}`)
 
 }
 
@@ -115,6 +150,8 @@ const il2cpp_main = ()=>{
         // dumpMainLevelManager();
 
         dumpLevelManager();
+
+        // dumpUserInfoMangaer();
 
     })
 
