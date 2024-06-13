@@ -7,7 +7,8 @@
 include device_arch.mk
 
 all: check_arch build_c convert_so 
-	./node_modules/.bin/frida-compile index.ts -o _agent.js -c
+	#./node_modules/.bin/frida-compile index.ts -o _agent.js -c
+	./node_modules/.bin/frida-compile index.water.sort.puzzle.game.color.sorting.free.ts -o _agent.js -c
 
 convert_so:
 	./node_modules/ts-frida/dist/bin/so2ts.py --no-content -b c/libs/$(DEVICE_ARCH)/libpatchgame.so -o modinfos/libmodpatchgame.ts

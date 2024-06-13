@@ -184,8 +184,21 @@ export const listTextures= ()=>{
     const UnityEngine_Texture = Il2Cpp.domain.assembly("UnityEngine.CoreModule").image
         .class('UnityEngine.Texture');
 
-    const allTexturesArray = UnityEngine_Object.method('FindObjectsOfType').overload('System.Type')
-        .invoke(UnityEngine_Texture.type.object) as Il2Cpp.Array;
+    let  allTexturesArray :Il2Cpp.Array | null=null;
+
+    if( UnityEngine_Object.tryMethod("FindObjectsOfType", 1) != null){
+        allTexturesArray = UnityEngine_Object.method('FindObjectsOfType').overload('System.Type') 
+            .invoke(UnityEngine_Object.type.object) as  Il2Cpp.Array;
+    }
+
+    if( UnityEngine_Object.tryMethod("FindObjectsOfType", 2) != null ){
+
+        allTexturesArray = UnityEngine_Object.method('FindObjectsOfType').overload('System.Type', 'System.Boolean') 
+            .invoke(UnityEngine_Texture.type.object, true) as Il2Cpp.Array;
+    }
+
+    if(!allTexturesArray) throw new Error(`can not find FindObjectsOfType`);
+
 
     console.log(`All textures: ${allTexturesArray.length}`)
 
@@ -220,4 +233,52 @@ export const listMeshes = ()=>{
         console.log(name, mesh.class.name, vertexCount);
     }
 
+}
+
+export const il2cpp_hook = ()=>{
+    const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
+    Il2Cpp.trace()
+        .assemblies(Assembly_CSharp)
+        //.filterClasses(c=>!c.name.includes('GuruFramework'))
+        .and()
+        .attach()
+}
+
+export const parseSystem_Collections_Generic_List = (l:Il2Cpp.Object) =>{
+
+    const count = l.method('get_Count').invoke() as number;
+
+    const list : any[] = [];
+
+    for(let t = 0;t<count ;t++){
+        const item = l.method('get_Item').invoke(t) as Il2Cpp.Object;
+        list.push(item)
+    }
+
+    return list;
+
+
+}
+
+export const parseInt32Arrray = (a:Il2Cpp.Array) =>{
+
+    const arr : number [] = []
+
+    for(const item of a){
+
+        const n = item as number;
+
+        arr.push(n)
+
+    }
+
+    return arr;
+
+}
+
+export const getUnityVersion = ()=>{
+    const UnityEngine_Application = Il2Cpp.domain.assembly("UnityEngine.CoreModule").image
+        .class('UnityEngine.Application');
+    const Version = UnityEngine_Application.method('get_unityVersion').invoke() as Il2Cpp.String;
+    return Version.toString();
 }
