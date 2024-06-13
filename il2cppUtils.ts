@@ -282,3 +282,20 @@ export const getUnityVersion = ()=>{
     const Version = UnityEngine_Application.method('get_unityVersion').invoke() as Il2Cpp.String;
     return Version.toString();
 }
+
+export const parseVector2Array = (arr:Il2Cpp.Array) =>{
+    const vArr : {x:number , y:number} [] = [];
+    for(const item of arr) {
+        const v = item as Il2Cpp.Object;
+        vArr.push(parseVector2(v))
+    }
+    return vArr;
+}
+
+
+export const parseVector2 = (v:Il2Cpp.Object) =>{
+    return {
+        x : v.field('x').value as number,
+        y : v.field('y').value as number,
+    }
+}
