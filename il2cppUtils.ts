@@ -19,14 +19,6 @@ interface Scale {
     z: number
 }
 
-interface Transform {
-    name: string,
-    position: Position,
-    rotation: Rotation,
-    scale: Scale,
-    children: Transform[]
-}
-
 
 function displayTransform(transform: Il2Cpp.Object, depth: number = 0): void {
     let indents = '   '.repeat(depth);
@@ -182,5 +174,50 @@ export const listGameObjects = (includeInactive:boolean=false)=>{
         allGameObjets,
         allGameObjectNames,
     };
+
+}
+
+export const listTextures= ()=>{
+    const UnityEngine_Object = Il2Cpp.domain.assembly("UnityEngine.CoreModule").image
+        .class('UnityEngine.Object');
+
+    const UnityEngine_Texture = Il2Cpp.domain.assembly("UnityEngine.CoreModule").image
+        .class('UnityEngine.Texture');
+
+    const allTexturesArray = UnityEngine_Object.method('FindObjectsOfType').overload('System.Type')
+        .invoke(UnityEngine_Texture.type.object) as Il2Cpp.Array;
+
+    console.log(`All textures: ${allTexturesArray.length}`)
+
+    for(const item of allTexturesArray){
+        const texture = item as Il2Cpp.Object;
+        const name = (texture.method('get_name').invoke() as Il2Cpp.String ).toString();
+        const width = texture.method('get_width').invoke() as number;
+        const height= texture.method('get_height').invoke() as number;
+        const isReadable = texture.method('get_isReadable').invoke() as boolean;
+        console.log(name, texture.class.name, isReadable, width, height);
+    }
+
+}
+
+
+export const listMeshes = ()=>{
+    const UnityEngine_Object = Il2Cpp.domain.assembly("UnityEngine.CoreModule").image
+        .class('UnityEngine.Object');
+
+    const UnityEngine_Mesh = Il2Cpp.domain.assembly("UnityEngine.CoreModule").image
+        .class('UnityEngine.Mesh');
+
+    const allMeshesArray = UnityEngine_Object.method('FindObjectsOfType').overload('System.Type')
+        .invoke(UnityEngine_Mesh.type.object) as Il2Cpp.Array;
+
+    console.log(`All meshes: ${allMeshesArray.length}`)
+
+    for(const item of allMeshesArray) {
+        const mesh = item as Il2Cpp.Object;
+        const name = (mesh.method('get_name').invoke() as Il2Cpp.String ).toString();
+        const vertexCount = mesh.method('get_vertexCount').invoke() as number;
+        console.log(name, mesh.class.name, vertexCount);
+    }
 
 }

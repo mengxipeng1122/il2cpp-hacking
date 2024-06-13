@@ -7,6 +7,8 @@ import {
     dumpCurrentScene,
     dumpScenes,
     listGameObjects,
+    listMeshes,
+    listTextures,
 } from './il2cppUtils.js'
 
 const il2cpp_hook = ()=>{
@@ -27,8 +29,11 @@ const main = ()=>{
         // console.log(`dump scenes: ${JSON.stringify(dumpScenes())}`)
 
         // console.log(`Game Objects: ${JSON.stringify(listGameObjects())}`)
-        //console.log(`Current scene: ${JSON.stringify(dumpCurrentScene(true))}`)
-        dumpCurrentScene(true);
+        // console.log(`Current scene: ${JSON.stringify(dumpCurrentScene(true))}`)
+        // dumpCurrentScene(true);
+
+        //listTextures();
+        listMeshes();
 
     })
 
