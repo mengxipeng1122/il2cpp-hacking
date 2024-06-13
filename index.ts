@@ -4,6 +4,8 @@ import 'frida-il2cpp-bridge'
 import "ts-frida"
 
 import {
+    parseVector2,
+    parseVector2Array,
     getUnityVersion,
     parseSystem_Collections_Generic_List,
     parseInt32Arrray,
@@ -19,103 +21,77 @@ const il2cpp_hook = ()=>{
         .and()
         .attach()
 }
-
-
-const parseLevelData = (LevelData:Il2Cpp.Object) =>{
-
-    const puzzle_id = (LevelData.method('get_puzzle_id').invoke() as Il2Cpp.String) .toString();
-
-    const tubesList = parseSystem_Collections_Generic_List(LevelData.method('get_tubes').invoke() as Il2Cpp.Object);
-    const stepsList = parseSystem_Collections_Generic_List(LevelData.method('get_steps').invoke() as Il2Cpp.Object);
-
-
-    const tubes = tubesList.map(item=> parseInt32Arrray(item as Il2Cpp.Array))
-    const steps = stepsList.map(item=> parseInt32Arrray(item as Il2Cpp.Array))
+const parseLevelData = (levelData:Il2Cpp.Object)=>{
+    const ID            = levelData.field("ID"          ).value;
+    const DiffCount     = levelData.field('DiffCount'   ).value;
+    const DesignSize    = parseVector2(levelData.field('DesignSize'  ).value as Il2Cpp.Object);
+    const DiffPos       = parseVector2Array(levelData.field("DiffPos"     ).value as Il2Cpp.Array);
+    const DiffFramePos  = parseVector2Array(levelData.field("DiffFramePos").value as Il2Cpp.Array);
 
     return {
-        puzzle_id,
-        tubes,
-        steps,
+        ID            ,
+        DiffCount     ,
+        DesignSize    ,
+        DiffPos       ,
+        DiffFramePos  ,
+
     }
+
 }
+      
 
-const parseStageData = (stageData:Il2Cpp.Object)=>{
 
-    const stage_id = (stageData.method('get_stage_id').invoke() as Il2Cpp.String).toString();
-    const levelsList = parseSystem_Collections_Generic_List(
-        stageData.method('get_levels').invoke() as Il2Cpp.Object
-    )
+const dumpMainLevelManager = ()=>{
 
-    const levels = levelsList.map(item=> parseLevelData(item) )
+    const MainLevelManager = Il2Cpp.domain.assembly("Assembly-CSharp").image
+        .class('MainLevelManager');
 
-    return {
-        stage_id,
-        levels,
+    const mainLevelManager = MainLevelManager.method('get_Instance').invoke() as Il2Cpp.Object;
+
+    const ConfigName = (mainLevelManager.field('ConfigName').value as Il2Cpp.String).toString();
+
+    console.log(`ConfigName: ${ConfigName}`)
+
+    const maxLevel = mainLevelManager.method('get_MaxLevel').invoke() as number;
+
+    console.log(`Max level: ${maxLevel}`)
+
+    for(let n=1; n < maxLevel; n++) {
+        console.log(n)
+        const levelID = (mainLevelManager.method('GetLevelID').invoke(n) as Il2Cpp.String).toString();
+        const packageLevelID = (mainLevelManager.method('GetPackageLevelID').invoke(n) as Il2Cpp.String).toString();
+
+        console.log(n, levelID, packageLevelID)
     }
-}
 
-const dumpLevelData = ()=>{
-
-    const GameManager = Il2Cpp.domain.assembly('Assembly-CSharp').image
-        .class('GameManager');
-
-    console.log(`Game Manager ${GameManager}`);
-
-    const gameManager = GameManager.method('get_Instance').invoke() as Il2Cpp.Object;
-    console.log(`instance ${gameManager}`);
-
-    const Title = gameManager.field('Title').value as Il2Cpp.Object;
-    const m_Text = Title.field('m_Text').value as Il2Cpp.String;
-    const Skip = gameManager.field('Skip').value as boolean;
-
-    console.log(Title, Skip, m_Text.toString());
-
-    const LevelData = gameManager.method('GetLevelData').invoke() as Il2Cpp.Object
-    console.log(`Lelve data: ${JSON.stringify(parseLevelData(LevelData))}`)
 
 
 }
 
-const dumpAllLevelData = ()=>{
+const dumpLevelManager = ()=>{
 
-    const GuruFramework_Level_ActivityLevelMgr = Il2Cpp.domain.assembly('Assembly-CSharp').image
-        .class('GuruFramework.Level.ActivityLevelMgr');
+    const LevelManager = Il2Cpp.domain.assembly("Assembly-CSharp").image
+        .class('LevelManager');
 
-    const activityLevelMgr = GuruFramework_Level_ActivityLevelMgr.method('get_Instance').invoke() as Il2Cpp.Object;
-    console.log(`Activity levelMgr: ${activityLevelMgr}`)
+    const levelManager = LevelManager.method('get_Instance').invoke() as Il2Cpp.Object;
 
-    const _stages = activityLevelMgr.field('_stages') .value as Il2Cpp.Array;
-    console.log(`Stages: ${_stages.length}`)
-    for(const item of _stages){
-        const stageData = item as Il2Cpp.Object;
-        const stage_id = (stageData.method('get_stage_id').invoke() as Il2Cpp.String).toString();
-        const levels = parseSystem_Collections_Generic_List(
-            stageData.method('get_levels').invoke() as Il2Cpp.Object
-        )
-        console.log(`Stage id: ${stage_id}`);
-        levels.forEach(e=>{
-            console.log(`${JSON.stringify(parseLevelData(e))}`)
+    console.log(`Level Manager: ${levelManager}`)
 
-        })
-    }
-}
+    console.log(`_DiffNum: ${levelManager.field('_DiffNum').value as number}`)
+    console.log(`GameCurrentTime: ${levelManager.field('GameCurrentTime').value as number}`)
+    console.log(`_GameFindDiffNum: ${levelManager.field('_GameFindDiffNum').value as number}`)
+    console.log(`_levelLife: ${levelManager.field('_levelLife').value as number}`)
 
-const dumpAllLevelData1 = ()=>{
-    const GuruFramework_Level_LevelMgr = Il2Cpp.domain.assembly('Assembly-CSharp').image
-        .class('GuruFramework.Level.LevelMgr');
-    const levelMgr = GuruFramework_Level_LevelMgr.method('get_Instance').invoke() as Il2Cpp.Object;
+    const levelData = levelManager.method('get_LevelData').invoke() as Il2Cpp.Object;
+    console.log(`Level Data: ${JSON.stringify(parseLevelData(levelData))}`)
 
-
-    const _curStage = levelMgr.field('_curStage').value as Il2Cpp.Object;
-    console.log(`_curStage         : ${JSON.stringify(parseStageData(_curStage))} `);
-
-
-    const _stageIndex = levelMgr.field('_stageIndex').value as number;
-    const _stageStartLevel = levelMgr.field('_stageStartLevel').value as number;
-    const _stageEndevel = levelMgr.field('_stageEndLevel').value as number;
-    console.log(`_stageIndex         : ${_stageIndex} `);
-    console.log(`_stageStartLevel    : ${_stageStartLevel} `);
-    console.log(`_stageEndevel       : ${_stageEndevel} `);
+    console.log(`Level Type: ${levelManager.method('get_LevelType').invoke()}`)
+    console.log(`Level ID: ${levelManager.method('get_LevelID').invoke()}`)
+    console.log(`Level Name: ${levelManager.method('get_LevelName').invoke()}`)
+    console.log(`Level Category: ${levelManager.method('get_LevelCategory').invoke()}`)
+    console.log(`Level : ${levelManager.method('get_Level').invoke()}`)
+    console.log(`Level cost time: ${levelManager.method('get_LevelCostTime').invoke()}`)
+    console.log(`Actually game time: ${levelManager.method('get_ActuallyGameTime').invoke()}`)
 
 
 
@@ -131,19 +107,14 @@ const il2cpp_main = ()=>{
 
     // console.log(JSON.stringify(MyFrida.androidAppInfo()))
     Il2Cpp.perform(()=>{
-        Il2Cpp.dump('dump.cs');
+        // Il2Cpp.dump('dump.cs');
         console.log(`Unity Version: ${getUnityVersion()}`)
 
         // il2cpp_hook();
-        // dumpAllLevelData();
-        // dumpAllLevelData1();
 
-        // listGameObjects(true);
-        // dumpCurrentScene(true);
+        // dumpMainLevelManager();
 
-        // listTextures();
-
-
+        dumpLevelManager();
 
     })
 
