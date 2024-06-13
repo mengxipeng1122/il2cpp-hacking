@@ -6,11 +6,12 @@
         "build": " frida-compile index.ts -o _agent.js -c"
     },
     "devDependencies": {
+        "frida-compile": "^16.4.1",
         "@types/frida-gum": "^17.1.0",
-        "@types/node": "^16.4.8",
-        "frida-compile": "^10.0.0"
+        "@types/node": "^16.4.8"
     },
     "dependencies": {
+        "frida-il2cpp-bridge": "^0.9.0",
         "ts-frida": "file:../ts-frida/ts-frida-1.0.2.tgz"
     }
 }
