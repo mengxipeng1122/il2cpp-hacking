@@ -210,7 +210,9 @@ const il2cpp_main = ()=>{
 
     // console.log(JSON.stringify(MyFrida.androidAppInfo()))
     Il2Cpp.perform(()=>{
-        // Il2Cpp.dump('unity_dump.cs');
+
+        Il2Cpp.dump('Unity.dump.cs');
+
         console.log(`Unity Version: ${getUnityVersion()}`)
 
         // il2cpp_hook();

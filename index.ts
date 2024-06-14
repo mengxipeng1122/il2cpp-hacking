@@ -22,11 +22,15 @@ const il2cpp_hook = ()=>{
 
 const il2cpp_main = ()=>{
 
-    // console.log(JSON.stringify(MyFrida.androidAppInfo()))
-    Il2Cpp.perform(()=>{
-        // Il2Cpp.dump('dump.cs');
+    console.log(JSON.stringify(MyFrida.androidAppInfo()))
 
-        il2cpp_hook();
+    Il2Cpp.perform(()=>{
+
+        console.log(`Unity version: ${Il2Cpp.unityVersion}`)
+
+        Il2Cpp.dump('Unity.dump.cs');
+
+        // il2cpp_hook();
 
         // console.log(`dump scenes: ${JSON.stringify(dumpScenes())}`)
 
