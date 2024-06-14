@@ -22,6 +22,46 @@ const il2cpp_hook = ()=>{
         .attach()
 }
 
+const parseUserData = (userData:Il2Cpp.Object) =>{
+
+    const _userDataFile                =(userData.field('_userDataFile'                 ).value as Il2Cpp.String).toString();
+    const _udid                        =(userData.field('_udid'                         ).value as Il2Cpp.String).toString();
+    const _name                        =(userData.field('_name'                         ).value as Il2Cpp.String).toString();
+    const _country                     =(userData.field('_country'                      ).value as Il2Cpp.String).toString();
+    const _gold                        = userData.field('_gold'                         ).value;
+    const _chestBonusFinishLevel       = userData.field('_chestBonusFinishLevel'        ).value;
+    const _level                       = userData.field('_level'                        ).value;
+    const _specialLevel                = userData.field('_specialLevel'                 ).value;
+    const _specialLevelState           = userData.field('_specialLevelState'            ).value;
+    const _noAD                        = userData.field('_noAD'                         ).value;
+    const _hasBuyProp                  = userData.field('_hasBuyProp'                   ).value;
+    const _isNoUseTaskButton           = userData.field('_isNoUseTaskButton'            ).value;
+    const _playLevel                   = userData.field('_playLevel'                    ).value;
+    const _eventTest                   = userData.field('_eventTest'                    ).value;
+    const _isNewOldEventIsTest         = userData.field('_isNewOldEventIsTest'          ).value;
+    const _isEventNewOld               = userData.field('_isEventNewOld'                ).value;
+
+    return {
+        _userDataFile                ,
+        _udid                        ,
+        _name                        ,
+        _country                     ,
+        _gold                        ,
+        _chestBonusFinishLevel       ,
+        _level                       ,
+        _specialLevel                ,
+        _specialLevelState           ,
+        _noAD                        ,
+        _hasBuyProp                  ,
+        _isNoUseTaskButton           ,
+        _playLevel                   ,
+        _eventTest                   ,
+        _isNewOldEventIsTest         ,
+        _isEventNewOld               ,
+    }
+
+}
+
 const parseLevelAsset = (levelAsset:Il2Cpp.Object) =>{
 
     return {
@@ -128,7 +168,28 @@ const dumpUserInfoMangaer = ()=>{
     console.log(`Is no use task button: ${userInfoManager.method("get_IsNoUseTaskButton").invoke()}`)
 
     const userData = userInfoManager.method('get_Data').invoke() as Il2Cpp.Object;
-    console.log(`Userdata: ${userData}`)
+    console.log(`Userdata: ${JSON.stringify(parseUserData(userData))}`)
+
+    userData.field('_gold').value = 9999999;
+    userData.field('_noAD').value = true;
+    userData.field('_hasBuyProp').value = true;
+    // set Gold
+    const gold = userData.method('get_Gold').invoke() as number;
+    console.log('gold', gold)
+
+    //userData.method('set_Gold') .invoke(100) 
+
+
+}
+
+const dumpApplication = ()=> {
+
+    const UnityEngine_Application = Il2Cpp.domain.assembly('UnityEngine.CoreModule').image
+        .class('UnityEngine.Application');
+
+    const platform = UnityEngine_Application.method('get_platform').invoke();
+    console.log(`Platform: ${platform} ${typeof platform} ${JSON.stringify(platform)}  `);
+
 
 }
 
@@ -137,21 +198,32 @@ const soname = 'libil2cpp.so'
 
 const il2cpp_main = ()=>{
 
-    console.log(soname, JSON.stringify(MyFrida.getELFInfoInModule(soname)))
+    const appInfo = MyFrida.androidAppInfo();
+    console.log(JSON.stringify(appInfo))
 
+    const dumpDir = `${appInfo.externalFilesDir}/dumps/`
+
+
+    console.log(soname, JSON.stringify(MyFrida.getELFInfoInModule(soname)))
+    const m = Process.getModuleByName(soname);
+    console.log(m.path)
 
     // console.log(JSON.stringify(MyFrida.androidAppInfo()))
     Il2Cpp.perform(()=>{
-        // Il2Cpp.dump('dump.cs');
+        // Il2Cpp.dump('unity_dump.cs');
         console.log(`Unity Version: ${getUnityVersion()}`)
 
         // il2cpp_hook();
 
+        listTextures(dumpDir);
+
         // dumpMainLevelManager();
 
-        dumpLevelManager();
+        // dumpLevelManager();
 
         // dumpUserInfoMangaer();
+
+        // dumpApplication();
 
     })
 

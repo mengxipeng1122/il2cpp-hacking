@@ -1,5 +1,6 @@
 
 import 'frida-il2cpp-bridge'
+import * as path from 'path'
 
 interface Position {
     x: number,
@@ -177,12 +178,18 @@ export const listGameObjects = (includeInactive:boolean=false)=>{
 
 }
 
-export const listTextures= ()=>{
+export const listTextures= (dumpDir:string='')=>{
     const UnityEngine_Object = Il2Cpp.domain.assembly("UnityEngine.CoreModule").image
         .class('UnityEngine.Object');
 
     const UnityEngine_Texture = Il2Cpp.domain.assembly("UnityEngine.CoreModule").image
         .class('UnityEngine.Texture');
+
+    const UnityEngine_ImageConversion = Il2Cpp.domain.assembly("UnityEngine.ImageConversionModule").image
+        .class('UnityEngine.ImageConversion');
+
+    const Utility= Il2Cpp.domain.assembly("Assembly-CSharp").image
+        .class('Utility');
 
     let  allTexturesArray :Il2Cpp.Array | null=null;
 
@@ -202,13 +209,32 @@ export const listTextures= ()=>{
 
     console.log(`All textures: ${allTexturesArray.length}`)
 
+    let idx = 0;
+
     for(const item of allTexturesArray){
         const texture = item as Il2Cpp.Object;
         const name = (texture.method('get_name').invoke() as Il2Cpp.String ).toString();
         const width = texture.method('get_width').invoke() as number;
         const height= texture.method('get_height').invoke() as number;
         const isReadable = texture.method('get_isReadable').invoke() as boolean;
-        console.log(name, texture.class.name, isReadable, width, height);
+        console.log(name,  isReadable, width, height);
+
+        if(texture.class.name == 'Texture2D' && isReadable){
+            if (dumpDir) {
+                const dumpFile = path.join(dumpDir, idx.toString().padStart(8, '0') + '.png');
+                console.log(`Dumping ${name} to ${dumpFile}`) 
+                const bytes = UnityEngine_ImageConversion.method('EncodeToPNG').invoke(texture) as Il2Cpp.Array;
+                const dumpFileString = Il2Cpp.string(dumpFile);
+                Utility.method('WriteFile').invoke(dumpFileString, bytes);
+            }
+        }
+
+        idx++;
+
+        //const c = texture.method('GetPixel').invoke(1,1);
+        //console.log(c);
+
+//        UnityEngine.Color GetPixel(System.Int32 x, System.Int32 y); 
     }
 
 }
