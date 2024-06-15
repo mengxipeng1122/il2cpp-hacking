@@ -348,3 +348,15 @@ export const findObjects = (clz:Il2Cpp.Class, dump:boolean=false) => {
     return instance as Il2Cpp.Object;
 
 }
+
+export const getScreenResolution = ()=>{
+    const UnityEngine_Screen =c("UnityEngine.CoreModule",'UnityEngine.Screen');
+    const width = UnityEngine_Screen.method('get_width' ).invoke() as number;
+    const height= UnityEngine_Screen.method('get_height').invoke() as number;
+
+    return {
+        width,
+        height,
+    }
+
+}

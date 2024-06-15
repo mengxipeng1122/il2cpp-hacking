@@ -1,5 +1,6 @@
 
 
+import * as path from 'path'
 import 'frida-il2cpp-bridge'
 import "ts-frida"
 
@@ -12,7 +13,12 @@ import {
     listTextures,
     listGameObjects,
     dumpCurrentScene,
+    getScreenResolution,
 } from '../il2cppUtils.js'
+
+import {
+    mod as patchlibinfo,
+} from '../modinfos/libmodpatchgame.js'
 
 const il2cpp_hook = ()=>{
     const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
@@ -93,8 +99,6 @@ const parseLevelData = (levelData:Il2Cpp.Object)=>{
 
 }
       
-
-
 const dumpMainLevelManager = ()=>{
 
     const MainLevelManager = Il2Cpp.domain.assembly("Assembly-CSharp").image
@@ -117,9 +121,6 @@ const dumpMainLevelManager = ()=>{
 
         console.log(n, levelID, packageLevelID)
     }
-
-
-
 }
 
 const dumpLevelManager = ()=>{
@@ -148,9 +149,6 @@ const dumpLevelManager = ()=>{
     console.log(`Actually game time: ${levelManager.method('get_ActuallyGameTime').invoke()}`)
 
     console.log(`Level asset: ${JSON.stringify(parseLevelAsset(levelManager.field('LevelAsset').value as Il2Cpp.Object))}`)
-
-
-
 }
 
 const dumpUserInfoMangaer = ()=>{
@@ -179,7 +177,6 @@ const dumpUserInfoMangaer = ()=>{
 
     //userData.method('set_Gold') .invoke(100) 
 
-
 }
 
 const dumpApplication = ()=> {
@@ -195,14 +192,35 @@ const dumpApplication = ()=> {
 
 const soname = 'libil2cpp.so'
 
+    const _frida_log_callback = new NativeCallback(
+    function (sp) {
+        const message = sp.readUtf8String();
+        console.log(message);
+        globalThis.console.log(message);
+    }, 
+    // Return type of the callback function.
+    'void', 
+    // Argument types of the callback function.
+    ['pointer']);
 
 const il2cpp_main = ()=>{
+
+    const patchlib  = patchlibinfo.load(
+        path.join('/data/local/tmp','libpatchgame.so'),
+        [
+            soname,
+        ],
+        {
+            ... MyFrida.frida_symtab,
+
+        }
+    )
+
 
     const appInfo = MyFrida.androidAppInfo();
     console.log(JSON.stringify(appInfo))
 
     const dumpDir = `${appInfo.externalFilesDir}/dumps/`
-
 
     console.log(soname, JSON.stringify(MyFrida.getELFInfoInModule(soname)))
     const m = Process.getModuleByName(soname);
@@ -210,14 +228,47 @@ const il2cpp_main = ()=>{
 
     // console.log(JSON.stringify(MyFrida.androidAppInfo()))
     Il2Cpp.perform(()=>{
+        const { width, height } = getScreenResolution();
+        console.log(`Screen resolution: ${width}x${height}`)
 
-        Il2Cpp.dump('Unity.dump.cs');
+        // Il2Cpp.dump('Unity.dump.cs');
+        if (patchlib.symbols.init!=undefined) {
+            new NativeFunction(patchlib.symbols.init,'int',['int','int'])(width, height);
+        }
+
+        // hook 
+        const hook_game = ()=>{
+
+//            MyFrida.findFuns('eglSwapBuffers');
+
+            const hooks : {p:NativePointer, name:string, opts:MyFrida.HookFunActionOptArgs} [] = [
+                {p:Module.getExportByName("libGLES_mali.so",'eglSwapBuffers'), name: 'eglSwapBuffers', opts:{
+                    hide:true,
+                    enterFun(args, tstr, thiz) {
+                        if (patchlib.symbols.hookGL!=undefined) {
+                            new NativeFunction(patchlib.symbols.hookGL,'int',['int','int'])(width, height);
+                        }
+                    },
+                }},
+            ];
+
+            [
+                ... hooks,
+            ].forEach(({p, name, opts})=>{
+                console.log(`hook ${name} ${JSON.stringify(opts)}`)
+                MyFrida.HookAction.addInstance(p, new MyFrida.HookFunAction({...opts, name}));
+            })
+
+            
+        }
+        hook_game();
+
 
         console.log(`Unity Version: ${getUnityVersion()}`)
 
         // il2cpp_hook();
 
-        listTextures(dumpDir);
+        // listTextures(dumpDir);
 
         // dumpMainLevelManager();
 
