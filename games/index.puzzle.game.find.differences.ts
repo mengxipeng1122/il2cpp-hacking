@@ -21,9 +21,15 @@ import {
 } from '../modinfos/libmodpatchgame.js'
 
 const il2cpp_hook = ()=>{
+    //const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
     const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
+    const UnityEngine_UIElementsModule = Il2Cpp.domain.assembly('UnityEngine.UIElementsModule');
     Il2Cpp.trace(false)
-        .assemblies(Assembly_CSharp)
+        .assemblies(
+            Assembly_CSharp,
+            UnityEngine_UIElementsModule,
+        )
+        .filterClasses(c=>c.name.includes('OnKeyDown'))
         .and()
         .attach()
 }
@@ -241,7 +247,7 @@ const il2cpp_main = ()=>{
 
 //            MyFrida.findFuns('eglSwapBuffers');
 
-            const hooks : {p:NativePointer, name:string, opts:MyFrida.HookFunActionOptArgs} [] = [
+            const hooksForEGL : {p:NativePointer, name:string, opts:MyFrida.HookFunActionOptArgs} [] = [
                 {p:Module.getExportByName("libGLES_mali.so",'eglSwapBuffers'), name: 'eglSwapBuffers', opts:{
                     hide:true,
                     enterFun(args, tstr, thiz) {
@@ -252,8 +258,28 @@ const il2cpp_main = ()=>{
                 }},
             ];
 
+            const hooksForInputEvent : {p:NativePointer, name:string, opts:MyFrida.HookFunActionOptArgs} [] = [
+                {p:Module.getExportByName("libandroid.so",'_ZN7android32android_view_KeyEvent_fromNativeEP7_JNIEnvPKNS_8KeyEventE'), name: 'android::android_view_KeyEvent_fromNative', opts:{ 
+
+                    hide:true,
+
+                    enterFun(args, tstr, thiz) {
+                        if(patchlib.symbols.processInputEvent){
+                            new NativeFunction(patchlib.symbols.processInputEvent,'void',['pointer'])(
+                                args[1]
+                            );
+                        }
+                        
+                        
+                    },
+
+                }, },
+
+            ];
+
             [
-                ... hooks,
+                ... hooksForEGL,
+                ... hooksForInputEvent,
             ].forEach(({p, name, opts})=>{
                 console.log(`hook ${name} ${JSON.stringify(opts)}`)
                 MyFrida.HookAction.addInstance(p, new MyFrida.HookFunAction({...opts, name}));
@@ -263,10 +289,9 @@ const il2cpp_main = ()=>{
         }
         hook_game();
 
-
         console.log(`Unity Version: ${getUnityVersion()}`)
 
-        // il2cpp_hook();
+        il2cpp_hook();
 
         // listTextures(dumpDir);
 
