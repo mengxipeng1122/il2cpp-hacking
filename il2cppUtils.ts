@@ -325,3 +325,26 @@ export const parseVector2 = (v:Il2Cpp.Object) =>{
         y : v.field('y').value as number,
     }
 }
+
+export const c = (assemblyName:string, className:string) =>{
+    return Il2Cpp.domain.assembly(assemblyName).image.class(className);
+}
+
+export const findObjects = (clz:Il2Cpp.Class, dump:boolean=false) => {
+
+    const UnityEngine_Object =c("UnityEngine.CoreModule",'UnityEngine.Object');
+
+    const instances = UnityEngine_Object.method('FindObjectsOfType').overload('System.Type')
+        .invoke(clz.type.object) as Il2Cpp.Array;
+
+    if(instances.length<=0) throw new Error(`can not find instances of class ${clz.name} `);
+
+    const instance =  instances.get(0);
+    if(dump){
+        console.log(`Found ${instances.length} instances of class ${clz.name} `);
+        console.log(`The first instance: ${instance}`);
+    }
+
+    return instance as Il2Cpp.Object;
+
+}

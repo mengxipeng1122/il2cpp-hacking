@@ -2,7 +2,10 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE:= patchgame
-LOCAL_SRC_FILES := 
+
+LOCAL_SRC_FILES :=   \
+    ../../node_modules/ts-frida/dist/nativeLib/miniz.c
+
 LOCAL_C_INCLUDES := 
 LOCAL_LDLIBS := 
 LOCAL_ARM_MODE := 

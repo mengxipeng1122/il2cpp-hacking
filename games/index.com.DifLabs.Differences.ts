@@ -1,4 +1,5 @@
 
+import * as path from 'path'
 
 import 'frida-il2cpp-bridge'
 import "ts-frida"
@@ -13,6 +14,10 @@ import {
     listGameObjects,
     dumpCurrentScene,
 } from '../il2cppUtils.js'
+
+import {
+    mod as patchlibinfo
+} from '../modinfos/libmodpatchgame.js'
 
 const il2cpp_hook = ()=>{
     const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
@@ -65,15 +70,41 @@ const dumpUserData = () =>{
 
 const il2cpp_main = ()=>{
 
+    const patchlib = patchlibinfo.load(
+        path.join('/data/local/tmp', 'libpatchgame.so'),
+        [
+            soname,
+        ],
+        {
+            ... MyFrida.frida_symtab,
+        }
+    )
+
+    if(0) {
+        new NativeFunction(patchlib.symbols.init,'int',[])();
+    }
+
+
     const appInfo = MyFrida.androidAppInfo();
     console.log(JSON.stringify(appInfo))
 
     const dumpDir = `${appInfo.externalFilesDir}/dumps/`
 
-
-    console.log(soname, JSON.stringify(MyFrida.getELFInfoInModule(soname)))
     const m = Process.getModuleByName(soname);
     console.log(m.path)
+    let sobuffer :ArrayBuffer | null = null;
+    if(m.path.split('!').length==2){
+        let [zipfile, zipentry] = m.path.split('!');
+        if(zipentry.startsWith('/')) zipentry = zipentry.substring(1);
+        sobuffer = MyFrida.minizReadEntryFromZipfile(zipfile, zipentry, patchlib);
+    }
+    else{
+        sobuffer = MyFrida.readFileData(m.path);
+    }
+
+    if(sobuffer==null) throw new Error(`can not read file: ${m.path}`);
+
+    console.log(soname, JSON.stringify(MyFrida.getELFInfo(sobuffer)))
 
     Il2Cpp.perform(()=>{
 
