@@ -20,6 +20,17 @@ interface Scale {
     z: number
 }
 
+export function parseQuaternion (quaternion:Il2Cpp.Object) {
+
+    const x = quaternion.field('x').value as number;
+    const y = quaternion.field('y').value as number;
+    const z = quaternion.field('z').value as number;
+    const w = quaternion.field('w').value as number;
+
+    return {x, y, z, w}
+
+}
+
 
 function displayTransform(transform: Il2Cpp.Object, depth: number = 0): void {
     let indents = '   '.repeat(depth);
@@ -51,7 +62,7 @@ interface TransformInfo  {
 
 };
 
-const parseVector3 = (v:Il2Cpp.Object) =>{
+export const parseVector3 = (v:Il2Cpp.Object) =>{
 
     return {
         x : v.field('x').value as number,
@@ -152,28 +163,25 @@ export const dumpScenes = ()=>{
 
 export const listGameObjects = (includeInactive:boolean=false)=>{
 
-    const UnityEngine_GameObject = Il2Cpp.domain.assembly("UnityEngine.CoreModule").image
-        .class('UnityEngine.GameObject');
+    const UnityEngine_GameObject = C("UnityEngine.CoreModule",'UnityEngine.GameObject');
 
-    const UnityEngine_Object = Il2Cpp.domain.assembly("UnityEngine.CoreModule").image
-        .class('UnityEngine.Object');
+    const UnityEngine_Object = C("UnityEngine.CoreModule",'UnityEngine.Object');
 
-    const allGameObjets = UnityEngine_Object.method('FindObjectsOfType').overload('System.Type','System.Boolean')
+    const allGameObjectsArray = UnityEngine_Object.method('FindObjectsOfType').overload('System.Type','System.Boolean')
         .invoke(UnityEngine_GameObject.type.object,includeInactive) as Il2Cpp.Array;
 
-    console.log(`All gameobjects length: ${allGameObjets.length}`)
+    console.log(`All gameobjects length: ${allGameObjectsArray.length}`)
 
-    const allGameObjectNames : string[] = [];
+    const allGameObjects : any[] = [];
 
-    for(const item of allGameObjets) {
+    for(const item of allGameObjectsArray) {
         const go = item as Il2Cpp.Object;
-        const name = go.method('get_name').invoke() as Il2Cpp.String;
-        allGameObjectNames.push(name.toString());
+        allGameObjects.push(parseGameObject(go))
     }
 
     return {
-        allGameObjets,
-        allGameObjectNames,
+        allGameObjectsArray,
+        allGameObjects,
     };
 
 }
@@ -318,6 +326,20 @@ export const parseVector2Array = (arr:Il2Cpp.Array) =>{
     return vArr;
 }
 
+export const parseGameObject = (go:Il2Cpp.Object) =>{
+
+    const name = (go.method('get_name').invoke() as Il2Cpp.String ).toString();
+
+    const transform = parseTransform(go.method('get_transform').invoke() as Il2Cpp.Object);
+    const activate = go.method('get_active').invoke() as boolean;
+    if (activate) {
+        console.log(`name: ${name} transform: ${JSON.stringify(transform)}`)
+    }
+
+    return {name, transform, activate};
+
+}
+
 
 export const parseVector2 = (v:Il2Cpp.Object) =>{
     return {
@@ -326,13 +348,13 @@ export const parseVector2 = (v:Il2Cpp.Object) =>{
     }
 }
 
-export const c = (assemblyName:string, className:string) =>{
+export const C = (assemblyName:string, className:string) =>{
     return Il2Cpp.domain.assembly(assemblyName).image.class(className);
 }
 
 export const findObjects = (clz:Il2Cpp.Class, dump:boolean=false) => {
 
-    const UnityEngine_Object =c("UnityEngine.CoreModule",'UnityEngine.Object');
+    const UnityEngine_Object =C("UnityEngine.CoreModule",'UnityEngine.Object');
 
     const instances = UnityEngine_Object.method('FindObjectsOfType').overload('System.Type')
         .invoke(clz.type.object) as Il2Cpp.Array;
@@ -350,7 +372,7 @@ export const findObjects = (clz:Il2Cpp.Class, dump:boolean=false) => {
 }
 
 export const getScreenResolution = ()=>{
-    const UnityEngine_Screen =c("UnityEngine.CoreModule",'UnityEngine.Screen');
+    const UnityEngine_Screen =C("UnityEngine.CoreModule",'UnityEngine.Screen');
     const width = UnityEngine_Screen.method('get_width' ).invoke() as number;
     const height= UnityEngine_Screen.method('get_height').invoke() as number;
 
@@ -358,5 +380,32 @@ export const getScreenResolution = ()=>{
         width,
         height,
     }
+}
 
+export const parseTransform   = (transform:Il2Cpp.Object) =>{
+    const UnityEngine_Camera = C('UnityEngine.CoreModule',"UnityEngine.Camera");
+    const cam = UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
+    const WorldToScreenPoint = cam.method('WorldToScreenPoint').overload('UnityEngine.Vector3');
+
+    const position              = transform.method('get_position').invoke() as Il2Cpp.Object;
+    const localPosition         = transform.method('get_localPosition').invoke() as Il2Cpp.Object;
+    const screen_position       = WorldToScreenPoint.invoke(position) as Il2Cpp.Object;
+    const screen_localPosition  = WorldToScreenPoint.invoke(localPosition) as Il2Cpp.Object;
+
+    const rotation = parseQuaternion(transform.method('get_rotation').invoke() as Il2Cpp.Object);
+    const localRotation = parseQuaternion(transform.method('get_localRotation').invoke() as Il2Cpp.Object);
+    const localScale = parseVector3(transform.method('get_localScale').invoke() as Il2Cpp.Object);
+
+
+    return {
+        position : parseVector3(position),
+        localPosition : parseVector3(localPosition),
+
+        screen_position : parseVector3(screen_position),
+        screen_localPosition : parseVector3(screen_localPosition),
+
+        rotation,
+        localRotation,
+        localScale,
+    }
 }

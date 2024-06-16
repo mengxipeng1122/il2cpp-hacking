@@ -5,7 +5,9 @@ import 'frida-il2cpp-bridge'
 import "ts-frida"
 
 import {
+    C,
     parseVector2,
+    parseVector3,
     parseVector2Array,
     getUnityVersion,
     parseSystem_Collections_Generic_List,
@@ -14,24 +16,120 @@ import {
     listGameObjects,
     dumpCurrentScene,
     getScreenResolution,
+    parseTransform,
 } from '../il2cppUtils.js'
 
 import {
     mod as patchlibinfo,
 } from '../modinfos/libmodpatchgame.js'
+import { copyFileSync } from 'fs'
 
 const il2cpp_hook = ()=>{
     //const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
     const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
     const UnityEngine_UIElementsModule = Il2Cpp.domain.assembly('UnityEngine.UIElementsModule');
-    Il2Cpp.trace(false)
+    Il2Cpp.trace(true)
         .assemblies(
             Assembly_CSharp,
-            UnityEngine_UIElementsModule,
+        //    UnityEngine_UIElementsModule,
         )
-        .filterClasses(c=>c.name.includes('OnKeyDown'))
+        .filterMethods(m=>m.name.includes('ShowTip'))
         .and()
         .attach()
+}
+
+const il2cpp_method_hook = () =>{
+    const CircleShaderController = C('Assembly-CSharp', 'CircleShaderController');
+    const ShowTip = CircleShaderController.method('ShowTip');
+    // System.Void ShowTip(UnityEngine.RectTransform rectTipCanvas, LevelDiff diff, System.Boolean showMask, System.Boolean showFinger);
+    // ShowTip.implementation = function (
+    //     rectTipCanvas:Il2Cpp.Object, 
+    //     diff:Il2Cpp.Object, 
+    //     showMask:boolean, 
+    //     showFinger:boolean
+    // ): void  {
+    //     // <--- onEnter
+    //     this.method<boolean>("ShowTip").invoke(rectTipCanvas,diff,showMask,showFinger);
+    //     // <--- onLeave
+    // };
+
+}
+
+const il2cpp_method_native_hook = () => {
+    const CircleShaderController = C('Assembly-CSharp', 'CircleShaderController');
+    const ShowTip = CircleShaderController.method('ShowTip');
+
+    console.log(`Method: ${ShowTip}`)
+
+    const hooks : {p:NativePointer, name:string, opts:MyFrida.HookFunActionOptArgs} [] = [
+        {p:ShowTip.virtualAddress, name:'CircleShaderController.ShowTip', opts:{
+            nparas:6,
+
+            // System.Void CircleShaderController::ShowTip(UnityEngine.RectTransform rectTipCanvas, LevelDiff diff, System.Boolean showMask, System.Boolean showFinger)
+
+            enterFun(args, tstr, thiz) {
+
+                const pthiz         = new Il2Cpp.Object(args[0]);
+                const rectTipCanvas = new Il2Cpp.Object(args[1]);
+                const diff          = new Il2Cpp.Object(args[2]);
+                const showMask      = args[3].toUInt32();
+                const showFinger    = args[4].toUInt32();
+
+                console.log(tstr, `rectTipCanvas: ${rectTipCanvas} diff: ${diff} showMask: ${showMask} showFinger: ${showFinger}`)
+
+                const rect = rectTipCanvas.method('get_rect').invoke() ;
+                console.log(tstr, `rect: ${rect}`)
+
+                const Width = diff.field("Width" ).value as number;
+                const Height= diff.field("Height").value as number;
+                console.log(tstr, `Width: ${Width} Height: ${Height}`)
+
+                const _tipCenter =  pthiz.field('_tipCenter').value as Il2Cpp.Object;
+                console.log(tstr, `_tipCenter: ${JSON.stringify(parseTransform(_tipCenter))} _tipCenter: ${_tipCenter}`)
+
+            },
+
+        },},
+    ];
+
+    [
+        ... hooks,
+    ].forEach(({p, name, opts}) => {
+        console.log(`hooking ${name} ${JSON.stringify(opts  )}`)
+        MyFrida.HookAction.addInstance(p, new MyFrida.HookFunAction({...opts,name}))
+    })
+}
+
+const parseLevelView = (levelView:Il2Cpp.Object) =>{
+
+    const UnityEngine_Camera = C("UnityEngine.CoreModule",'UnityEngine.Camera');
+    const mainCam = UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
+    console.log(`Main Camera: ${mainCam}`);
+
+    const _rectRateDialog    =  levelView.field("_rectRateDialog"     ).value as Il2Cpp.Object;
+    const _rectDiffView      =  levelView.field("_rectDiffView"       ).value as Il2Cpp.Object;
+    const RectFrame          =  levelView.field("RectFrame"           ).value as Il2Cpp.Object;
+    const RectTop            =  levelView.field("RectTop"             ).value as Il2Cpp.Object;
+    const RectBottom         =  levelView.field("RectBottom"          ).value as Il2Cpp.Object;
+    const RectPictureView    =  levelView.field("RectPictureView"     ).value as Il2Cpp.Object;
+
+    const position = (mainCam
+        .method('WorldToScreenPoint').overload("UnityEngine.Vector3")
+        .invoke(( RectBottom as Il2Cpp.Object).method('get_position').invoke() as Il2Cpp.Object)
+        ) as Il2Cpp.Object ;
+    console.log(`position: ${JSON.stringify(parseVector3(position))}`)
+
+
+    return {
+
+    _rectRateDialog    : parseTransform(_rectRateDialog ) ,
+    _rectDiffView      : parseTransform(_rectDiffView   ) ,
+    RectFrame          : parseTransform(RectFrame       ) ,
+    RectTop            : parseTransform(RectTop         ) ,
+    RectBottom         : parseTransform(RectBottom      ) ,
+    RectPictureView    : parseTransform(RectPictureView ) ,
+
+    }
 }
 
 const parseUserData = (userData:Il2Cpp.Object) =>{
@@ -71,7 +169,6 @@ const parseUserData = (userData:Il2Cpp.Object) =>{
         _isNewOldEventIsTest         ,
         _isEventNewOld               ,
     }
-
 }
 
 const parseLevelAsset = (levelAsset:Il2Cpp.Object) =>{
@@ -100,9 +197,20 @@ const parseLevelData = (levelData:Il2Cpp.Object)=>{
         DesignSize    ,
         DiffPos       ,
         DiffFramePos  ,
-
     }
+}
 
+const parseCircleShaderController = (circleShaderController:Il2Cpp.Object)=>{
+    const _shrinkNum = circleShaderController.field('_shrinkNum').value as number;
+    const Slider = circleShaderController.field('Slider').value as number;
+    const Center = circleShaderController.field('Center').value as number;
+
+    return {
+        _shrinkNum,
+        Slider,
+        Center,
+    }
+    
 }
       
 const dumpMainLevelManager = ()=>{
@@ -131,8 +239,7 @@ const dumpMainLevelManager = ()=>{
 
 const dumpLevelManager = ()=>{
 
-    const LevelManager = Il2Cpp.domain.assembly("Assembly-CSharp").image
-        .class('LevelManager');
+    const LevelManager = C("Assembly-CSharp",'LevelManager');
 
     const levelManager = LevelManager.method('get_Instance').invoke() as Il2Cpp.Object;
 
@@ -143,9 +250,6 @@ const dumpLevelManager = ()=>{
     console.log(`_GameFindDiffNum: ${levelManager.field('_GameFindDiffNum').value as number}`)
     console.log(`_levelLife: ${levelManager.field('_levelLife').value as number}`)
 
-    const levelData = levelManager.method('get_LevelData').invoke() as Il2Cpp.Object;
-    console.log(`Level Data: ${JSON.stringify(parseLevelData(levelData))}`)
-
     console.log(`Level Type: ${levelManager.method('get_LevelType').invoke()}`)
     console.log(`Level ID: ${levelManager.method('get_LevelID').invoke()}`)
     console.log(`Level Name: ${levelManager.method('get_LevelName').invoke()}`)
@@ -155,6 +259,29 @@ const dumpLevelManager = ()=>{
     console.log(`Actually game time: ${levelManager.method('get_ActuallyGameTime').invoke()}`)
 
     console.log(`Level asset: ${JSON.stringify(parseLevelAsset(levelManager.field('LevelAsset').value as Il2Cpp.Object))}`)
+
+
+    const levelData = levelManager.method('get_LevelData').invoke() as Il2Cpp.Object;
+    console.log(`Level Data: ${JSON.stringify(parseLevelData(levelData))}`)
+
+    for(let n=0; n< 5;n++){
+
+        console.log(`Position${n}: ${levelManager.method('GetDiffPos').invoke(n)}`)
+        console.log(`Position${n}: ${levelManager.method('GetDiffFramePos').invoke(n)}`)
+    }
+
+    const levelView = levelManager.field('View').value as Il2Cpp.Object;
+    const _topTipMaskCtl = parseCircleShaderController(levelView.field('_topTipMaskCtl').value as Il2Cpp.Object);
+    const _bottomTipMaskCtl = parseCircleShaderController(levelView.field('_bottomTipMaskCtl').value as Il2Cpp.Object);
+
+    console.log(`_topTipMaskCtl: ${JSON.stringify(_topTipMaskCtl)}`)
+    console.log(`_bottomTipMaskCtl: ${JSON.stringify(_bottomTipMaskCtl)}`)
+
+    console.log(`Level View: ${JSON.stringify(parseLevelView(levelView))}`)
+
+
+
+
 }
 
 const dumpUserInfoMangaer = ()=>{
@@ -245,8 +372,6 @@ const il2cpp_main = ()=>{
         // hook 
         const hook_game = ()=>{
 
-//            MyFrida.findFuns('eglSwapBuffers');
-
             const hooksForEGL : {p:NativePointer, name:string, opts:MyFrida.HookFunActionOptArgs} [] = [
                 {p:Module.getExportByName("libGLES_mali.so",'eglSwapBuffers'), name: 'eglSwapBuffers', opts:{
                     hide:true,
@@ -291,7 +416,16 @@ const il2cpp_main = ()=>{
 
         console.log(`Unity Version: ${getUnityVersion()}`)
 
-        il2cpp_hook();
+        // il2cpp_hook();
+        
+        // il2cpp_method_hook();
+
+        // il2cpp_method_native_hook();
+
+        //console.log(`All game objects: ${JSON.stringify(listGameObjects())}`)
+        // listGameObjects(true);
+
+        // dumpCurrentScene(true);
 
         // listTextures(dumpDir);
 
@@ -302,6 +436,61 @@ const il2cpp_main = ()=>{
         // dumpUserInfoMangaer();
 
         // dumpApplication();
+
+        if(1) {
+
+            const UnityEngine_Camera = C('UnityEngine.CoreModule',"UnityEngine.Camera");
+            const cam = UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
+            const Vector3 = C("UnityEngine.CoreModule",'UnityEngine.Vector3');
+            const Vector2 = C("UnityEngine.CoreModule",'UnityEngine.Vector2');
+            const screenPointer = Vector3.method('get_zero').invoke() as Il2Cpp.Object;
+            screenPointer.field('x').value = 1200;
+            screenPointer.field('y').value = 500;
+            screenPointer.field('z').value = 20.;
+
+
+            console.log(`screenPointer: ${JSON.stringify(parseVector3(screenPointer))}`)
+
+            const ScreenPointToRay = cam.method('ScreenPointToRay').overload('UnityEngine.Vector3');
+            console.log(`ScreenPointToRay: ${ScreenPointToRay}`)
+
+            const ray = ScreenPointToRay.invoke(screenPointer) as Il2Cpp.Object;
+            console.log(`ray: ${ray}`)
+
+            const m_Origin      = ray.field('m_Origin'      ).value as Il2Cpp.Object;
+            const m_Direction   = ray.field('m_Direction'   ).value as Il2Cpp.Object;
+
+            const origin    = Vector2.method('get_zero').invoke() as Il2Cpp.Object;
+            const direction = Vector2.method('get_zero').invoke() as Il2Cpp.Object;
+
+            console.log(`origin: ${JSON.stringify(m_Origin)}`)
+            console.log(`direction: ${JSON.stringify(m_Direction)}`)
+
+            origin.field('x').value = m_Origin.field('x').value as number;
+            origin.field('y').value = m_Origin.field('y').value as number;
+
+            direction.field('x').value = m_Direction.field('x').value as number;
+            direction.field('y').value = m_Direction.field('y').value as number;
+
+            const UnityEngine_Physcics2D = C('UnityEngine.Physics2DModule',"UnityEngine.Physics2D");
+
+            const hit = UnityEngine_Physcics2D.method('Raycast').overload('UnityEngine.Vector2', 'UnityEngine.Vector2').invoke(origin, direction) as Il2Cpp.Object;
+
+            console.log(`raycast: ${hit} ${JSON.stringify(hit)}`);
+            const collider = hit.method('get_collider').invoke() as Il2Cpp.Object;
+            console.log(`collider: ${collider} ${JSON.stringify(collider)} ${collider!=null}`);
+
+            if(!collider.isNull()){
+
+                const selectedObject = collider.method('get_gameObject').invoke() as Il2Cpp.Object;
+                console.log(`selectedObject: ${selectedObject}`)
+
+            }
+
+
+
+
+        }
 
     })
 

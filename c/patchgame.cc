@@ -85,7 +85,7 @@ extern "C" __attribute__((visibility("default"))) int hookGL (int width, int hei
                 if(show){
 
                     background->AddCircle(
-                            ImVec2(200, 200), 
+                            ImVec2(450, screenHeight-1013), 
                             100, 
                             ImGui::GetColorU32(ImGuiCol_Text));
                 }
