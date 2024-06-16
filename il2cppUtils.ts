@@ -386,11 +386,12 @@ export const parseTransform   = (transform:Il2Cpp.Object) =>{
     const UnityEngine_Camera = C('UnityEngine.CoreModule',"UnityEngine.Camera");
     const cam = UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
     const WorldToScreenPoint = cam.method('WorldToScreenPoint').overload('UnityEngine.Vector3');
+    const ScreenToViewportPoint= cam.method('ScreenToViewportPoint').overload('UnityEngine.Vector3');
 
     const position              = transform.method('get_position').invoke() as Il2Cpp.Object;
     const localPosition         = transform.method('get_localPosition').invoke() as Il2Cpp.Object;
-    const screen_position       = WorldToScreenPoint.invoke(position) as Il2Cpp.Object;
-    const screen_localPosition  = WorldToScreenPoint.invoke(localPosition) as Il2Cpp.Object;
+    const screen_position       = ScreenToViewportPoint.invoke(WorldToScreenPoint.invoke(position) as Il2Cpp.Object) as Il2Cpp.Object;
+    const screen_localPosition  = ScreenToViewportPoint.invoke(WorldToScreenPoint.invoke(localPosition) as Il2Cpp.Object) as Il2Cpp.Object;
 
     const rotation = parseQuaternion(transform.method('get_rotation').invoke() as Il2Cpp.Object);
     const localRotation = parseQuaternion(transform.method('get_localRotation').invoke() as Il2Cpp.Object);
@@ -408,4 +409,16 @@ export const parseTransform   = (transform:Il2Cpp.Object) =>{
         localRotation,
         localScale,
     }
+}
+
+export const parseCamera = (cam?:Il2Cpp.Object) =>{
+    const UnityEngine_Camera = C('UnityEngine.CoreModule',"UnityEngine.Camera");
+    const camerasCount =  UnityEngine_Camera.method('GetAllCamerasCount').invoke() as number;
+    console.log(`Cameras count: ${camerasCount}`);
+
+    cam = cam || UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
+
+    console.log(`Rect: ${cam.method('get_rect').invoke()}`);
+
+
 }

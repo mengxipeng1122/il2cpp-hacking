@@ -17,6 +17,7 @@ import {
     dumpCurrentScene,
     getScreenResolution,
     parseTransform,
+    parseCamera,
 } from '../il2cppUtils.js'
 
 import {
@@ -423,7 +424,8 @@ const il2cpp_main = ()=>{
         // il2cpp_method_native_hook();
 
         //console.log(`All game objects: ${JSON.stringify(listGameObjects())}`)
-        // listGameObjects(true);
+
+        listGameObjects(true);
 
         // dumpCurrentScene(true);
 
@@ -437,7 +439,9 @@ const il2cpp_main = ()=>{
 
         // dumpApplication();
 
-        if(1) {
+        // parseCamera();
+
+        if(0) {
 
             const UnityEngine_Camera = C('UnityEngine.CoreModule',"UnityEngine.Camera");
             const cam = UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
