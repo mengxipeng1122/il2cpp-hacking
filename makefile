@@ -35,6 +35,10 @@ tt:
 	echo PLATFORM ${PLATFORM}
 	echo GAME_PACKAGE_NAME ${GAME_PACKAGE_NAME}
 
+clean:
+	make -C c clean
+	rm -fr modinfos/lib*.ts
+
 
 
 

@@ -18,6 +18,7 @@ import {
     getScreenResolution,
     parseTransform,
     parseCamera,
+    parseGameObject,
 } from '../il2cppUtils.js'
 
 import {
@@ -455,6 +456,12 @@ const il2cpp_main = ()=>{
         console.log(`Screen resolution: ${width}x${height}`)
 
         const updateDiffs = ()=> {
+            {
+                const pfun = patchlib.symbols.clearDiffs;
+                if (pfun) {
+                    new NativeFunction(pfun, 'void', [])();
+                }
+            }
 
             const LevelManager = C("Assembly-CSharp", 'LevelManager');
             const levelManager = LevelManager.method('get_Instance').invoke() as Il2Cpp.Object;
@@ -463,32 +470,59 @@ const il2cpp_main = ()=>{
                 if (levelView != null && !levelView.isNull()) {
                     const _isActived = levelView.field('_isActived').value as boolean;
                     if (_isActived) {
-                        // check if in LevelView 
-                        const allDiffGameObjects = findAllDiffGameObjects();
+                        const UnityEngine_GameObject = C("UnityEngine.CoreModule", 'UnityEngine.GameObject');
+                        const levelData = levelManager.method('get_LevelData').invoke() as Il2Cpp.Object;
+                        const DiffCount = levelData.field('DiffCount').value as number;
 
-                        {
-                            const pfun = patchlib.symbols.clearDiffs;
-                            if (pfun) {
-                                new NativeFunction(pfun, 'void', [])();
-                            }
-                        }
-
-                        allDiffGameObjects.forEach((obj: any) => {
-
-                            const x = obj.transform.screen_position.x;
-                            const y = obj.transform.screen_position.y;
-                            console.log(x, y, obj.name)
-
-                            {
-                                const pfun = patchlib.symbols.addDiff;
-                                if (pfun) {
-                                    new NativeFunction(pfun, 'void', ['int', 'int'])(
-                                        Math.floor(x),
-                                        Math.floor(y),
-                                    );
+                        const findDiffs = (cb:(x:number, y:number)=>void)=> {
+                            const allGameObjectsArray = UnityEngine_GameObject
+                                .method('FindObjectsOfType')
+                                .invoke(UnityEngine_GameObject.type.object) as  Il2Cpp.Array;
+                            for(const item of allGameObjectsArray){
+                                const go = item as Il2Cpp.Object; 
+                                const obj = parseGameObject(go);
+                                if(obj.name.includes('Diff')){
+                                    console.log(`${obj.name}: ${go.toString()}`)
+                                    cb(obj.transform.screen_position.x, obj.transform.screen_position.y)
                                 }
                             }
-                        })
+                        };
+
+                        const findDiffs0 = (cb: (x: number, y: number) => void) => {
+                            for (let i = 1; i <= DiffCount; i++) {
+                                const name = `Diff${i}`;
+                                const gameObjectName = Il2Cpp.string(name);
+                                const go = (UnityEngine_GameObject.method("Find")
+                                    .overload('System.String')
+                                    .invoke(gameObjectName)) as Il2Cpp.Object;
+                                const obj = parseGameObject(go);
+                                if (go) {
+
+                                    const x = obj.transform.screen_position.x;
+                                    const y = obj.transform.screen_position.y;
+
+                                    cb(x, y);
+
+                                }
+                            }
+
+                        };
+
+
+
+                        findDiffs0((x:number, y:number) => {
+
+                                if (1) {
+                                    const pfun = patchlib.symbols.addDiff;
+                                    if (pfun) {
+                                        new NativeFunction(pfun, 'void', ['int', 'int'])(
+                                            Math.floor(x),
+                                            Math.floor(y),
+                                        );
+                                    }
+                                }
+                            });
+
                         console.log(`updated diffs`)
                         return;
 
@@ -497,7 +531,7 @@ const il2cpp_main = ()=>{
             }
 
             console.log(`levelView is not activing `)
-            return 
+            return; 
         }
 
         if (patchlib.symbols.init!=undefined) {
