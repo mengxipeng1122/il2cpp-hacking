@@ -323,6 +323,57 @@ const dumpApplication = ()=> {
 
 
 }
+const testRay = () => {
+
+    const UnityEngine_Camera = C('UnityEngine.CoreModule', "UnityEngine.Camera");
+    const cam = UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
+    const Vector3 = C("UnityEngine.CoreModule", 'UnityEngine.Vector3');
+    const Vector2 = C("UnityEngine.CoreModule", 'UnityEngine.Vector2');
+    const screenPointer = Vector3.method('get_zero').invoke() as Il2Cpp.Object;
+    screenPointer.field('x').value = 1200;
+    screenPointer.field('y').value = 500;
+    screenPointer.field('z').value = 20.;
+
+
+    console.log(`screenPointer: ${JSON.stringify(parseVector3(screenPointer))}`)
+
+    const ScreenPointToRay = cam.method('ScreenPointToRay').overload('UnityEngine.Vector3');
+    console.log(`ScreenPointToRay: ${ScreenPointToRay}`)
+
+    const ray = ScreenPointToRay.invoke(screenPointer) as Il2Cpp.Object;
+    console.log(`ray: ${ray}`)
+
+    const m_Origin = ray.field('m_Origin').value as Il2Cpp.Object;
+    const m_Direction = ray.field('m_Direction').value as Il2Cpp.Object;
+
+    const origin = Vector2.method('get_zero').invoke() as Il2Cpp.Object;
+    const direction = Vector2.method('get_zero').invoke() as Il2Cpp.Object;
+
+    console.log(`origin: ${JSON.stringify(m_Origin)}`)
+    console.log(`direction: ${JSON.stringify(m_Direction)}`)
+
+    origin.field('x').value = m_Origin.field('x').value as number;
+    origin.field('y').value = m_Origin.field('y').value as number;
+
+    direction.field('x').value = m_Direction.field('x').value as number;
+    direction.field('y').value = m_Direction.field('y').value as number;
+
+    const UnityEngine_Physcics2D = C('UnityEngine.Physics2DModule', "UnityEngine.Physics2D");
+
+    const hit = UnityEngine_Physcics2D.method('Raycast').overload('UnityEngine.Vector2', 'UnityEngine.Vector2').invoke(origin, direction) as Il2Cpp.Object;
+
+    console.log(`raycast: ${hit} ${JSON.stringify(hit)}`);
+    const collider = hit.method('get_collider').invoke() as Il2Cpp.Object;
+    console.log(`collider: ${collider} ${JSON.stringify(collider)} ${collider != null}`);
+
+    if (!collider.isNull()) {
+
+        const selectedObject = collider.method('get_gameObject').invoke() as Il2Cpp.Object;
+        console.log(`selectedObject: ${selectedObject}`)
+
+    }
+
+}
 
 const soname = 'libil2cpp.so'
 
@@ -350,7 +401,6 @@ const il2cpp_main = ()=>{
         }
     )
 
-
     const appInfo = MyFrida.androidAppInfo();
     console.log(JSON.stringify(appInfo))
 
@@ -365,7 +415,7 @@ const il2cpp_main = ()=>{
         const { width, height } = getScreenResolution();
         console.log(`Screen resolution: ${width}x${height}`)
 
-        // Il2Cpp.dump('Unity.dump.cs');
+
         if (patchlib.symbols.init!=undefined) {
             new NativeFunction(patchlib.symbols.init,'int',['int','int'])(width, height);
         }
@@ -410,10 +460,11 @@ const il2cpp_main = ()=>{
                 console.log(`hook ${name} ${JSON.stringify(opts)}`)
                 MyFrida.HookAction.addInstance(p, new MyFrida.HookFunAction({...opts, name}));
             })
-
-            
         }
+
         hook_game();
+
+        // Il2Cpp.dump('Unity.dump.cs');
 
         console.log(`Unity Version: ${getUnityVersion()}`)
 
@@ -425,7 +476,32 @@ const il2cpp_main = ()=>{
 
         //console.log(`All game objects: ${JSON.stringify(listGameObjects())}`)
 
-        listGameObjects(true);
+        {
+            const gameObjects = listGameObjects(true).allGameObjects;
+            for(const go of gameObjects){
+
+                const x =go.transform.screen_position.x;
+                const y =go.transform.screen_position.y;
+                const name = go.name;
+                console.log(go, x,y, name)
+
+                if(name.includes('Btn')){
+
+                        if(patchlib.symbols.addItem){
+                            new NativeFunction(patchlib.symbols.addItem,'void',['int','int','pointer'])(
+                                Math.floor(x),
+                                Math.floor(y),
+                                Memory.allocUtf8String(name),
+                            );
+                        }
+                }
+                        
+
+            
+
+            }
+
+        }
 
         // dumpCurrentScene(true);
 
@@ -441,60 +517,6 @@ const il2cpp_main = ()=>{
 
         // parseCamera();
 
-        if(0) {
-
-            const UnityEngine_Camera = C('UnityEngine.CoreModule',"UnityEngine.Camera");
-            const cam = UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
-            const Vector3 = C("UnityEngine.CoreModule",'UnityEngine.Vector3');
-            const Vector2 = C("UnityEngine.CoreModule",'UnityEngine.Vector2');
-            const screenPointer = Vector3.method('get_zero').invoke() as Il2Cpp.Object;
-            screenPointer.field('x').value = 1200;
-            screenPointer.field('y').value = 500;
-            screenPointer.field('z').value = 20.;
-
-
-            console.log(`screenPointer: ${JSON.stringify(parseVector3(screenPointer))}`)
-
-            const ScreenPointToRay = cam.method('ScreenPointToRay').overload('UnityEngine.Vector3');
-            console.log(`ScreenPointToRay: ${ScreenPointToRay}`)
-
-            const ray = ScreenPointToRay.invoke(screenPointer) as Il2Cpp.Object;
-            console.log(`ray: ${ray}`)
-
-            const m_Origin      = ray.field('m_Origin'      ).value as Il2Cpp.Object;
-            const m_Direction   = ray.field('m_Direction'   ).value as Il2Cpp.Object;
-
-            const origin    = Vector2.method('get_zero').invoke() as Il2Cpp.Object;
-            const direction = Vector2.method('get_zero').invoke() as Il2Cpp.Object;
-
-            console.log(`origin: ${JSON.stringify(m_Origin)}`)
-            console.log(`direction: ${JSON.stringify(m_Direction)}`)
-
-            origin.field('x').value = m_Origin.field('x').value as number;
-            origin.field('y').value = m_Origin.field('y').value as number;
-
-            direction.field('x').value = m_Direction.field('x').value as number;
-            direction.field('y').value = m_Direction.field('y').value as number;
-
-            const UnityEngine_Physcics2D = C('UnityEngine.Physics2DModule',"UnityEngine.Physics2D");
-
-            const hit = UnityEngine_Physcics2D.method('Raycast').overload('UnityEngine.Vector2', 'UnityEngine.Vector2').invoke(origin, direction) as Il2Cpp.Object;
-
-            console.log(`raycast: ${hit} ${JSON.stringify(hit)}`);
-            const collider = hit.method('get_collider').invoke() as Il2Cpp.Object;
-            console.log(`collider: ${collider} ${JSON.stringify(collider)} ${collider!=null}`);
-
-            if(!collider.isNull()){
-
-                const selectedObject = collider.method('get_gameObject').invoke() as Il2Cpp.Object;
-                console.log(`selectedObject: ${selectedObject}`)
-
-            }
-
-
-
-
-        }
 
     })
 

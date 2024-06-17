@@ -122,9 +122,9 @@ export const dumpCurrentScene = (display:boolean=false)=>{
 
     }
 
-
     for(const item of rootGameObjectsArray){
         const gameObject = item as Il2Cpp.Object;
+        //CheckVisibility(gameObject, 0);
         const transform = gameObject.method('get_transform').invoke() as Il2Cpp.Object;
         if(display){
             displayTransform(transform)
@@ -161,13 +161,14 @@ export const dumpScenes = ()=>{
 
 }
 
-export const listGameObjects = (includeInactive:boolean=false)=>{
+export const listGameObjects = (includeInactive:boolean=false) => {
 
-    const UnityEngine_GameObject = C("UnityEngine.CoreModule",'UnityEngine.GameObject');
+    const UnityEngine_GameObject    = C("UnityEngine.CoreModule",'UnityEngine.GameObject');
 
-    const UnityEngine_Object = C("UnityEngine.CoreModule",'UnityEngine.Object');
+    const UnityEngine_Object        = C("UnityEngine.CoreModule",'UnityEngine.Object');
 
-    const allGameObjectsArray = UnityEngine_Object.method('FindObjectsOfType').overload('System.Type','System.Boolean')
+    const allGameObjectsArray       = UnityEngine_Object.method('FindObjectsOfType')
+        .overload('System.Type','System.Boolean')
         .invoke(UnityEngine_GameObject.type.object,includeInactive) as Il2Cpp.Array;
 
     console.log(`All gameobjects length: ${allGameObjectsArray.length}`)
@@ -176,7 +177,20 @@ export const listGameObjects = (includeInactive:boolean=false)=>{
 
     for(const item of allGameObjectsArray) {
         const go = item as Il2Cpp.Object;
-        allGameObjects.push(parseGameObject(go))
+        const visible = IsGameObjectVisible2D(go);
+        const name = ( go.method('get_name').invoke() as Il2Cpp.String).toString();
+        const UnityEngine_Component    = C("UnityEngine.CoreModule",'UnityEngine.Component');
+        const components = go
+            .method('GetComponents')
+            .overload()
+            .inflate(UnityEngine_Component)
+            .invoke() as Il2Cpp.Array;
+
+        if(visible){
+            const gameObject = parseGameObject(go);
+            //console.log(` GameObject: ${name} ${JSON.stringify(gameObject.transform.screen_position)}`);
+            allGameObjects.push(parseGameObject(go));
+        }
     }
 
     return {
@@ -332,9 +346,9 @@ export const parseGameObject = (go:Il2Cpp.Object) =>{
 
     const transform = parseTransform(go.method('get_transform').invoke() as Il2Cpp.Object);
     const activate = go.method('get_active').invoke() as boolean;
-    if (activate) {
-        console.log(`name: ${name} transform: ${JSON.stringify(transform)}`)
-    }
+    // if (activate) {
+    //     console.log(`name: ${name} transform: ${JSON.stringify(transform)}`)
+    // }
 
     return {name, transform, activate};
 
@@ -390,8 +404,10 @@ export const parseTransform   = (transform:Il2Cpp.Object) =>{
 
     const position              = transform.method('get_position').invoke() as Il2Cpp.Object;
     const localPosition         = transform.method('get_localPosition').invoke() as Il2Cpp.Object;
-    const screen_position       = ScreenToViewportPoint.invoke(WorldToScreenPoint.invoke(position) as Il2Cpp.Object) as Il2Cpp.Object;
-    const screen_localPosition  = ScreenToViewportPoint.invoke(WorldToScreenPoint.invoke(localPosition) as Il2Cpp.Object) as Il2Cpp.Object;
+    const screen_position       = WorldToScreenPoint.invoke(position) as Il2Cpp.Object
+    const screen_localPosition  = WorldToScreenPoint.invoke(localPosition) as Il2Cpp.Object
+    const viewport_position       = ScreenToViewportPoint.invoke(screen_position) as Il2Cpp.Object;
+    const viewport_localPosition  = ScreenToViewportPoint.invoke(screen_localPosition) as Il2Cpp.Object;
 
     const rotation = parseQuaternion(transform.method('get_rotation').invoke() as Il2Cpp.Object);
     const localRotation = parseQuaternion(transform.method('get_localRotation').invoke() as Il2Cpp.Object);
@@ -399,11 +415,13 @@ export const parseTransform   = (transform:Il2Cpp.Object) =>{
 
 
     return {
-        position : parseVector3(position),
-        localPosition : parseVector3(localPosition),
+        position                : parseVector3(position                 ),
+        localPosition           : parseVector3(localPosition            ),
 
-        screen_position : parseVector3(screen_position),
-        screen_localPosition : parseVector3(screen_localPosition),
+        screen_position         : parseVector3(screen_position          ),
+        screen_localPosition    : parseVector3(screen_localPosition     ),
+        viewport_position       : parseVector3(viewport_position        ),
+        viewport_localPosition  : parseVector3(viewport_localPosition   ),
 
         rotation,
         localRotation,
@@ -419,6 +437,115 @@ export const parseCamera = (cam?:Il2Cpp.Object) =>{
     cam = cam || UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
 
     console.log(`Rect: ${cam.method('get_rect').invoke()}`);
+}
 
 
+export const IsRendererVisibleFrom2D = (renderer:Il2Cpp.Object, camera:Il2Cpp.Object) => {
+
+    const camPos = (camera.method('get_transform').invoke() as Il2Cpp.Object)
+        .method('get_position').invoke() as Il2Cpp.Object;
+    const get_sprite = renderer.tryMethod('get_sprite');
+
+    if(get_sprite!=null){
+
+        const sprite = get_sprite.invoke() as Il2Cpp.Object;
+        if(sprite!=null && !sprite.isNull()) {
+
+            const bounds = sprite.method('get_bounds').invoke() as Il2Cpp.Object;
+
+            // Check each corner to see if it's inside the camera's view
+
+            const min = bounds.method('get_min').invoke() as Il2Cpp.Object;
+            const max = bounds.method('get_max').invoke() as Il2Cpp.Object;
+
+            const minX = min.field('x').value as number;
+            const minY = min.field('y').value as number;
+            const maxX = max.field('x').value as number;
+            const maxY = max.field('y').value as number;
+
+            const UnityEngine_Vector3 = C("UnityEngine.CoreModule", "UnityEngine.Vector3");
+
+            for (let x = 0; x <= 1; x++) {
+                for (let y = 0; y <= 1; y++) {
+                    const test = UnityEngine_Vector3.method("get_zero").invoke() as Il2Cpp.Object;
+                    test.field('x').value = (x == 0) ? minX : maxX;
+                    test.field('y').value = (y == 0) ? minY : maxY;
+                    test.field('z').value = camPos.field('z').value;
+
+                    const screenPointTest = camera.method('WorldToScreenPoint').overload('UnityEngine.Vector3').invoke(test) as Il2Cpp.Object;
+                    const viewportTest = camera.method('ScreenToViewportPoint').overload('UnityEngine.Vector3')
+                        .invoke(screenPointTest) as Il2Cpp.Object;
+
+                    const viewportTestX = viewportTest.field('x').value as number;
+                    const viewportTestY = viewportTest.field('y').value as number;
+
+                    // Check if it's inside camera's view
+                    if (viewportTestX >= 0
+                        && viewportTestX <= 1
+                        && viewportTestY >= 0
+                        && viewportTestY <= 1) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+    }
+
+    // If none of the corners are in view, the object is not visible
+    return false;
+}
+
+export const CheckVisibility = (obj:Il2Cpp.Object, depth:number = 0) => {
+
+    let indents = '   '.repeat(depth);
+    console.log(indents, obj.toString());
+
+    const visible = IsGameObjectVisible2D(obj);
+    if(visible){
+                console.log("Visible GameObject: " + (obj.method('get_name').invoke() as Il2Cpp.String).toString());
+            }
+    const transform = obj.method('get_transform').invoke() as Il2Cpp.Object;
+    const childCount =  transform.method('get_childCount').invoke() as number;
+
+    // Recursively check the children of the GameObject
+    for (let i = 0; i < childCount; i++)
+    {
+        const child =  (transform.method('GetChild').invoke(i) as Il2Cpp.Object)
+            .method('get_gameObject').invoke() as Il2Cpp.Object;
+
+        CheckVisibility(child, depth+1)
+    }
+}
+
+
+const IsGameObjectVisible2D = (obj:Il2Cpp.Object):boolean =>{
+
+    const UnityeEngine_Renderer = C("UnityEngine.CoreModule","UnityEngine.Renderer");
+    const UnityEngine_Camera = C('UnityEngine.CoreModule',"UnityEngine.Camera");
+    const cam = UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
+
+    const name = (obj.method('get_name').invoke() as Il2Cpp.String).toString();
+
+    const UnityEngine_Component = C("UnityEngine.CoreModule",'UnityEngine.Component');
+    const components = obj
+        .method('GetComponents')
+        .overload()
+        .inflate(UnityEngine_Component)
+        .invoke() as Il2Cpp.Array;
+    for(const item of components) {
+        const component = item as Il2Cpp.Object;
+        const get_enabled = component.tryMethod('get_enabled');
+        if(get_enabled!=null) {
+            const enabled = get_enabled.invoke() as boolean;
+            if(enabled) {
+
+                if(IsRendererVisibleFrom2D(component, cam)) 
+                    return true;
+
+            }
+        }
+
+    }
+    return false;
 }

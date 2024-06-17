@@ -1,12 +1,24 @@
 
 
 #include <android/input.h>
+#include <string>
+#include <vector>
 
 #include "utils.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_wrapper.h"
 #include "imgui/imgui_impl_opengl3.h"
 #include "imgui/imgui_impl_android.h"
+
+struct Item {
+    int x;
+    int y;
+    std::string text;
+
+};
+
+
+
 
 
 void DrawLine(ImVec2 start, ImVec2 end, ImVec4 color) {
@@ -50,6 +62,7 @@ void DrawText2(float fontSize, ImVec2 position, ImVec4 color, const char *text) 
 }
 
 static bool show = true;
+static std::vector<Item> g_items;
 
 extern "C" __attribute__((visibility("default"))) int hookGL (int width, int height) {
 
@@ -84,10 +97,22 @@ extern "C" __attribute__((visibility("default"))) int hookGL (int width, int hei
 
                 if(show){
 
-                    background->AddCircle(
-                            ImVec2(450, screenHeight-1013), 
-                            100, 
-                            ImGui::GetColorU32(ImGuiCol_Text));
+                    for(auto it = g_items.begin(); it!=g_items.end(); it++){
+                        auto item = *it;
+                        auto x = item.x;
+                        auto y = item.y;
+                        auto* text = item.text.c_str();
+                        background->AddText(
+                            NULL, 32, ImVec2(x,screenHeight-y),
+                            ImGui::GetColorU32(ImGuiCol_Text),
+                            text
+                        );
+                    }
+
+                    // background->AddCircle(
+                    //         ImVec2(450, screenHeight-1013), 
+                    //         100, 
+                    //         ImGui::GetColorU32(ImGuiCol_Text));
                 }
                 //float radius = 30.0f;
                 //ImU32 color = ImColor(255, 0, 0, 255); // Red color
@@ -120,3 +145,11 @@ extern "C" __attribute__((visibility("default"))) void processInputEvent(AInputE
     }
 }
 
+
+extern "C" __attribute__((visibility("default"))) void addItem (int x, int y, const char* text){
+
+    g_items.push_back({
+        x,y,text,
+    });
+    
+}

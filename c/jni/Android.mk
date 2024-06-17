@@ -6,7 +6,6 @@ LOCAL_MODULE:= patchgame
 LOCAL_SRC_FILES :=   \
     ../patchgame.cc \
     ../../node_modules/ts-frida/dist/nativeLib/imgui/imgui.cpp                    \
-    ../../node_modules/ts-frida/dist/nativeLib/imgui/imgui_demo.cpp               \
     ../../node_modules/ts-frida/dist/nativeLib/imgui/imgui_draw.cpp               \
     ../../node_modules/ts-frida/dist/nativeLib/imgui/imgui_impl_android.cpp       \
     ../../node_modules/ts-frida/dist/nativeLib/imgui/imgui_impl_opengl3.cpp       \
