@@ -1,7 +1,7 @@
 
 
 import 'frida-il2cpp-bridge'
-import "ts-frida"
+// import "ts-frida"
 
 import {
     dumpCurrentScene,
@@ -22,7 +22,6 @@ const il2cpp_hook = ()=>{
 
 const il2cpp_main = ()=>{
 
-    console.log(JSON.stringify(MyFrida.androidAppInfo()))
 
     Il2Cpp.perform(()=>{
 
@@ -55,5 +54,7 @@ const main = ()=>{
 }
 
 console.log('##################################################')
-Java.perform(il2cpp_main)
+
+if(Java.available) Java.perform(il2cpp_main)
+else il2cpp_main()
 

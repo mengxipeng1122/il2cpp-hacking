@@ -375,7 +375,9 @@ const testRay = () => {
 
 }
 
-const findAllDiffGameObjects = (patchlib: MyFrida.PATHLIB_INFO_TYPE) => {
+const findAllDiffGameObjects = () : any[] => {
+    const foundGameObjects : any [] = [];
+
     const gameObjects = listGameObjects(true).allGameObjects;
     for (const go of gameObjects) {
 
@@ -386,26 +388,19 @@ const findAllDiffGameObjects = (patchlib: MyFrida.PATHLIB_INFO_TYPE) => {
 
         const regex = /"Diff[0-9]"/;
 
-        console.log(`${x} ${y} ${name} ${regex.test(name)}`)
+        // console.log(`${x} ${y} ${name} ${regex.test(name)}`)
 
         if (regex.test(name)) {
 
+            foundGameObjects.push(go);
+
             console.log(`Diff :${name}`)
 
-            const pfun = patchlib.symbols.addDiff;
-
-            if (pfun) {
-                new NativeFunction(pfun, 'void', ['int', 'int'])(
-                    Math.floor(x),
-                    Math.floor(y),
-                );
-            }
         }
 
-
-
-
     }
+
+    return foundGameObjects;
 
 }
 
@@ -450,6 +445,35 @@ const il2cpp_main = ()=>{
         const { width, height } = getScreenResolution();
         console.log(`Screen resolution: ${width}x${height}`)
 
+        // il2cpp_hook();
+        const updateDiffs = ()=> {
+            const allDiffGameObjects = findAllDiffGameObjects();
+
+            {
+                const pfun = patchlib.symbols.clearDiffs;
+                if (pfun) {
+                    new NativeFunction(pfun, 'void', [])();
+                }
+            }
+
+            allDiffGameObjects.forEach((obj: any) => {
+
+                const x = obj.transform.screen_position.x;
+                const y = obj.transform.screen_position.y;
+                console.log(x,y, obj.name)
+
+                {
+                    const pfun = patchlib.symbols.addDiff;
+                    if (pfun) {
+                        new NativeFunction(pfun, 'void', ['int', 'int'])(
+                            Math.floor(x),
+                            Math.floor(y),
+                        );
+                    }
+                }
+            })
+        }
+
 
         if (patchlib.symbols.init!=undefined) {
             new NativeFunction(patchlib.symbols.init,'int',['int','int'])(width, height);
@@ -469,17 +493,63 @@ const il2cpp_main = ()=>{
                 }},
             ];
 
+            const AKeyEvent_getAction = new NativeFunction(
+                Module.getExportByName('libandroid.so','AKeyEvent_getAction'),'uint',['pointer']);
+            const AKeyEvent_getKeyCode= new NativeFunction(
+                Module.getExportByName('libandroid.so','AKeyEvent_getKeyCode'),'uint',['pointer']);
+
+            const AKEY_EVENT_ACTION_DOWN = 0;
+            const AKEY_EVENT_ACTION_UP   = 1;
+
+            const AKEY_EVENT_A  =  96;
+            const AKEY_EVENT_B  =  97;
+            const AKEY_EVENT_X  =  99;
+            const AKEY_EVENT_Y  = 100;
+            const AKEY_EVENT_START  =  109;
+            const AKEY_EVENT_SELECT =  109;
+            const AKEY_EVENT_L1 =  102;
+            const AKEY_EVENT_L2 =  104;
+            const AKEY_EVENT_R1 =  103;
+            const AKEY_EVENT_R2 =  105;
+
             const hooksForInputEvent : {p:NativePointer, name:string, opts:MyFrida.HookFunActionOptArgs} [] = [
                 {p:Module.getExportByName("libandroid.so",'_ZN7android32android_view_KeyEvent_fromNativeEP7_JNIEnvPKNS_8KeyEventE'), name: 'android::android_view_KeyEvent_fromNative', opts:{ 
 
                     hide:true,
 
                     enterFun(args, tstr, thiz) {
-                        if(patchlib.symbols.processInputEvent){
-                            new NativeFunction(patchlib.symbols.processInputEvent,'void',['pointer'])(
-                                args[1]
-                            );
+                        const event=args[1];
+                        if(!event.isNull()){
+                            const action = AKeyEvent_getAction(event);
+                            const keyCode = AKeyEvent_getKeyCode(event);
+                            console.log(`${keyCode} ${action}`)
+                            const keyDown = action == AKEY_EVENT_ACTION_DOWN;
+                            if(keyDown){
+                                switch(keyCode){
+                                    case AKEY_EVENT_A: {
+                                        // toggle show
+                                        const pfun = patchlib.symbols.toggleShow;
+                                        if(pfun){
+                                            new NativeFunction(pfun, 'void',[])();
+                                        }
+                                    }
+                                    break;
+
+                                    case AKEY_EVENT_B: {
+                                        // update diff list
+                                        updateDiffs ();
+                                    }
+                                    break;
+                                }
+
+                            }
                         }
+
+                        // if(patchlib.symbols.processInputEvent){
+                        //     new NativeFunction(patchlib.symbols.processInputEvent,'void',['pointer'])(
+                        //         args[1]
+                        //     );
+                        // }
                         
                         
                     },
@@ -503,10 +573,8 @@ const il2cpp_main = ()=>{
 
         console.log(`Unity Version: ${getUnityVersion()}`)
 
-        // il2cpp_hook();
+        updateDiffs ();
 
-        findAllDiffGameObjects(patchlib);
-        
         // il2cpp_method_hook();
 
         // il2cpp_method_native_hook();

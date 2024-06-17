@@ -20,6 +20,14 @@ interface Scale {
     z: number
 }
 
+interface Quternion {
+    x: number,
+    y: number,
+    z: number,
+    w: number
+
+}
+
 export function parseQuaternion (quaternion:Il2Cpp.Object) {
 
     const x = quaternion.field('x').value as number;
@@ -39,7 +47,6 @@ function displayTransform(transform: Il2Cpp.Object, depth: number = 0): void {
     const position = transform.method('get_position'    ).invoke() as Il2Cpp.Object;
     const rotation = transform.method('get_rotation'    ).invoke() as Il2Cpp.Object;
     const scale    = transform.method('get_localScale'  ).invoke() as Il2Cpp.Object;
-    console.log(`${indents} ${name} Position: ${JSON.stringify(parseVector3(position))} Rotation: ${JSON.stringify(parseVector3(rotation))} Scale: ${JSON.stringify(parseVector3(scale))} ` );
 
     const childCount = transform.method('get_childCount').invoke() as number;
 
@@ -445,47 +452,54 @@ export const IsRendererVisibleFrom2D = (renderer:Il2Cpp.Object, camera:Il2Cpp.Ob
 
     const camPos = (camera.method('get_transform').invoke() as Il2Cpp.Object)
         .method('get_position').invoke() as Il2Cpp.Object;
+
     const get_sprite = renderer.tryMethod('get_sprite');
 
-    if(get_sprite!=null){
+    if(get_sprite!=null && !get_sprite.isNull()){
 
         const sprite = get_sprite.invoke() as Il2Cpp.Object;
         if(sprite!=null && !sprite.isNull()) {
 
-            const bounds = sprite.method('get_bounds').invoke() as Il2Cpp.Object;
+            const get_bounds = sprite.tryMethod('get_bounds');
+            if (get_bounds != null && !get_bounds.isNull()) {
 
-            // Check each corner to see if it's inside the camera's view
+                console.log(`get_bounds ${sprite} ${sprite.method('get_bounds')}`)
 
-            const min = bounds.method('get_min').invoke() as Il2Cpp.Object;
-            const max = bounds.method('get_max').invoke() as Il2Cpp.Object;
+                const bounds = sprite.method('get_bounds').invoke() as Il2Cpp.Object;
 
-            const minX = min.field('x').value as number;
-            const minY = min.field('y').value as number;
-            const maxX = max.field('x').value as number;
-            const maxY = max.field('y').value as number;
+                // Check each corner to see if it's inside the camera's view
 
-            const UnityEngine_Vector3 = C("UnityEngine.CoreModule", "UnityEngine.Vector3");
+                const min = bounds.method('get_min').invoke() as Il2Cpp.Object;
+                const max = bounds.method('get_max').invoke() as Il2Cpp.Object;
 
-            for (let x = 0; x <= 1; x++) {
-                for (let y = 0; y <= 1; y++) {
-                    const test = UnityEngine_Vector3.method("get_zero").invoke() as Il2Cpp.Object;
-                    test.field('x').value = (x == 0) ? minX : maxX;
-                    test.field('y').value = (y == 0) ? minY : maxY;
-                    test.field('z').value = camPos.field('z').value;
+                const minX = min.field('x').value as number;
+                const minY = min.field('y').value as number;
+                const maxX = max.field('x').value as number;
+                const maxY = max.field('y').value as number;
 
-                    const screenPointTest = camera.method('WorldToScreenPoint').overload('UnityEngine.Vector3').invoke(test) as Il2Cpp.Object;
-                    const viewportTest = camera.method('ScreenToViewportPoint').overload('UnityEngine.Vector3')
-                        .invoke(screenPointTest) as Il2Cpp.Object;
+                const UnityEngine_Vector3 = C("UnityEngine.CoreModule", "UnityEngine.Vector3");
 
-                    const viewportTestX = viewportTest.field('x').value as number;
-                    const viewportTestY = viewportTest.field('y').value as number;
+                for (let x = 0; x <= 1; x++) {
+                    for (let y = 0; y <= 1; y++) {
+                        const test = UnityEngine_Vector3.method("get_zero").invoke() as Il2Cpp.Object;
+                        test.field('x').value = (x == 0) ? minX : maxX;
+                        test.field('y').value = (y == 0) ? minY : maxY;
+                        test.field('z').value = camPos.field('z').value;
 
-                    // Check if it's inside camera's view
-                    if (viewportTestX >= 0
-                        && viewportTestX <= 1
-                        && viewportTestY >= 0
-                        && viewportTestY <= 1) {
-                        return true;
+                        const screenPointTest = camera.method('WorldToScreenPoint').overload('UnityEngine.Vector3').invoke(test) as Il2Cpp.Object;
+                        const viewportTest = camera.method('ScreenToViewportPoint').overload('UnityEngine.Vector3')
+                            .invoke(screenPointTest) as Il2Cpp.Object;
+
+                        const viewportTestX = viewportTest.field('x').value as number;
+                        const viewportTestY = viewportTest.field('y').value as number;
+
+                        // Check if it's inside camera's view
+                        if (viewportTestX >= 0
+                            && viewportTestX <= 1
+                            && viewportTestY >= 0
+                            && viewportTestY <= 1) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -536,15 +550,17 @@ const IsGameObjectVisible2D = (obj:Il2Cpp.Object):boolean =>{
         const UnityEngine_Component = C("UnityEngine.CoreModule", 'UnityEngine.Component');
         const components = obj
             .method('GetComponents')
-            .overload()
-            .inflate(UnityEngine_Component)
-            .invoke() as Il2Cpp.Array;
+            .overload('System.Type')
+            //.inflate(UnityEngine_Component)
+            .invoke(UnityeEngine_Renderer.type.object) as Il2Cpp.Array;
         for (const item of components) {
             const component = item as Il2Cpp.Object;
             const get_enabled = component.tryMethod('get_enabled');
             if (get_enabled != null) {
                 const enabled = get_enabled.invoke() as boolean;
                 if (enabled) {
+
+                    console.log(`trying ${name} ${component.toString()}`)
 
                     if (IsRendererVisibleFrom2D(component, cam))
                         return true;

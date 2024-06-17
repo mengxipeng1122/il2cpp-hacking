@@ -10,7 +10,11 @@ ifneq ($(wildcard env.mk),)
     include env.mk
 endif
 
-include device_arch.mk
+ifeq ($(strip $(PLATFORM)),)
+
+else
+    include device_arch.mk
+endif
 
 ifeq ($(strip $(GAME_PACKAGE_NAME)),)
     TYPESCRIPT_FILE=index.ts
@@ -19,7 +23,7 @@ else
 endif
 
 all: check_arch build_c convert_so 
-	./node_modules/.bin/frida-compile ${TYPESCRIPT_FILE} -o _agent.js -c
+	./node_modules/.bin/frida-compile ${TYPESCRIPT_FILE} -o _agent.js 
 
 convert_so:
 	./node_modules/ts-frida/dist/bin/so2ts.py --no-content -b c/libs/$(DEVICE_ARCH)/libpatchgame.so -o modinfos/libmodpatchgame.ts
