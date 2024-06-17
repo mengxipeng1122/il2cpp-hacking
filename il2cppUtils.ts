@@ -546,7 +546,6 @@ const IsGameObjectVisible2D = (obj:Il2Cpp.Object):boolean =>{
     const activate = obj.method('get_active').invoke() as boolean;
     if (activate) {
 
-
         const UnityEngine_Component = C("UnityEngine.CoreModule", 'UnityEngine.Component');
         const components = obj
             .method('GetComponents')

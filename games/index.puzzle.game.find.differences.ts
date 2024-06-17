@@ -29,12 +29,12 @@ const il2cpp_hook = ()=>{
     //const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
     const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
     const UnityEngine_UIElementsModule = Il2Cpp.domain.assembly('UnityEngine.UIElementsModule');
-    Il2Cpp.trace(true)
+    Il2Cpp.trace()
         .assemblies(
             Assembly_CSharp,
         //    UnityEngine_UIElementsModule,
         )
-        .filterMethods(m=>m.name.includes('ShowTip'))
+        // .filterMethods(m=>m.name.includes('ShowTip'))
         .and()
         .attach()
 }
@@ -118,7 +118,11 @@ const parseLevelView = (levelView:Il2Cpp.Object) =>{
         .method('WorldToScreenPoint').overload("UnityEngine.Vector3")
         .invoke(( RectBottom as Il2Cpp.Object).method('get_position').invoke() as Il2Cpp.Object)
         ) as Il2Cpp.Object ;
+
+    const IsShowing = levelView.field('IsShowing').value as boolean;
     console.log(`position: ${JSON.stringify(parseVector3(position))}`)
+
+    const _isActived = levelView.field('_isActived').value as boolean;
 
 
     return {
@@ -129,6 +133,10 @@ const parseLevelView = (levelView:Il2Cpp.Object) =>{
     RectTop            : parseTransform(RectTop         ) ,
     RectBottom         : parseTransform(RectBottom      ) ,
     RectPictureView    : parseTransform(RectPictureView ) ,
+
+    IsShowing,
+
+    _isActived, 
 
     }
 }
@@ -251,36 +259,37 @@ const dumpLevelManager = ()=>{
     console.log(`_GameFindDiffNum: ${levelManager.field('_GameFindDiffNum').value as number}`)
     console.log(`_levelLife: ${levelManager.field('_levelLife').value as number}`)
 
-    console.log(`Level Type: ${levelManager.method('get_LevelType').invoke()}`)
-    console.log(`Level ID: ${levelManager.method('get_LevelID').invoke()}`)
-    console.log(`Level Name: ${levelManager.method('get_LevelName').invoke()}`)
-    console.log(`Level Category: ${levelManager.method('get_LevelCategory').invoke()}`)
-    console.log(`Level : ${levelManager.method('get_Level').invoke()}`)
-    console.log(`Level cost time: ${levelManager.method('get_LevelCostTime').invoke()}`)
-    console.log(`Actually game time: ${levelManager.method('get_ActuallyGameTime').invoke()}`)
+    // console.log(`Level Type: ${levelManager.method('get_LevelType').invoke()}`)
+    // console.log(`Level ID: ${levelManager.method('get_LevelID').invoke()}`)
+    // console.log(`Level Name: ${levelManager.method('get_LevelName').invoke()}`)
+    // console.log(`Level Category: ${levelManager.method('get_LevelCategory').invoke()}`)
+    // console.log(`Level : ${levelManager.method('get_Level').invoke()}`)
+    // console.log(`Level cost time: ${levelManager.method('get_LevelCostTime').invoke()}`)
+    // console.log(`Actually game time: ${levelManager.method('get_ActuallyGameTime').invoke()}`)
 
-    console.log(`Level asset: ${JSON.stringify(parseLevelAsset(levelManager.field('LevelAsset').value as Il2Cpp.Object))}`)
-
-
-    const levelData = levelManager.method('get_LevelData').invoke() as Il2Cpp.Object;
-    console.log(`Level Data: ${JSON.stringify(parseLevelData(levelData))}`)
-
-    for(let n=0; n< 5;n++){
-
-        console.log(`Position${n}: ${levelManager.method('GetDiffPos').invoke(n)}`)
-        console.log(`Position${n}: ${levelManager.method('GetDiffFramePos').invoke(n)}`)
-    }
-
-    const levelView = levelManager.field('View').value as Il2Cpp.Object;
-    const _topTipMaskCtl = parseCircleShaderController(levelView.field('_topTipMaskCtl').value as Il2Cpp.Object);
-    const _bottomTipMaskCtl = parseCircleShaderController(levelView.field('_bottomTipMaskCtl').value as Il2Cpp.Object);
-
-    console.log(`_topTipMaskCtl: ${JSON.stringify(_topTipMaskCtl)}`)
-    console.log(`_bottomTipMaskCtl: ${JSON.stringify(_bottomTipMaskCtl)}`)
-
-    console.log(`Level View: ${JSON.stringify(parseLevelView(levelView))}`)
+    // console.log(`Level asset: ${JSON.stringify(parseLevelAsset(levelManager.field('LevelAsset').value as Il2Cpp.Object))}`)
 
 
+    // const levelData = levelManager.method('get_LevelData').invoke() as Il2Cpp.Object;
+    // console.log(`Level Data: ${JSON.stringify(parseLevelData(levelData))}`)
+
+    // for(let n=0; n< 5;n++){
+
+    //     console.log(`Position${n}: ${levelManager.method('GetDiffPos').invoke(n)}`)
+    //     console.log(`Position${n}: ${levelManager.method('GetDiffFramePos').invoke(n)}`)
+    // }
+
+     const levelView = levelManager.field('View').value as Il2Cpp.Object;
+     if(levelView!=null && !levelView.isNull()){
+        console.log(`LevelView: ${levelView}`)
+        console.log(`Level View: ${JSON.stringify(parseLevelView(levelView))}`)
+
+     }
+    // const _topTipMaskCtl = parseCircleShaderController(levelView.field('_topTipMaskCtl').value as Il2Cpp.Object);
+    // const _bottomTipMaskCtl = parseCircleShaderController(levelView.field('_bottomTipMaskCtl').value as Il2Cpp.Object);
+
+    // console.log(`_topTipMaskCtl: ${JSON.stringify(_topTipMaskCtl)}`)
+    // console.log(`_bottomTipMaskCtl: ${JSON.stringify(_bottomTipMaskCtl)}`)
 
 
 }
@@ -386,7 +395,7 @@ const findAllDiffGameObjects = () : any[] => {
         const name = go.name;
 
 
-        const regex = /"Diff[0-9]"/;
+        const regex = /"Diff\d{1,2}"/;
 
         // console.log(`${x} ${y} ${name} ${regex.test(name)}`)
 
@@ -445,35 +454,51 @@ const il2cpp_main = ()=>{
         const { width, height } = getScreenResolution();
         console.log(`Screen resolution: ${width}x${height}`)
 
-        // il2cpp_hook();
         const updateDiffs = ()=> {
-            const allDiffGameObjects = findAllDiffGameObjects();
 
-            {
-                const pfun = patchlib.symbols.clearDiffs;
-                if (pfun) {
-                    new NativeFunction(pfun, 'void', [])();
+            const LevelManager = C("Assembly-CSharp", 'LevelManager');
+            const levelManager = LevelManager.method('get_Instance').invoke() as Il2Cpp.Object;
+            if (levelManager != null && !levelManager.isNull()) {
+                const levelView = levelManager.field('View').value as Il2Cpp.Object;
+                if (levelView != null && !levelView.isNull()) {
+                    const _isActived = levelView.field('_isActived').value as boolean;
+                    if (_isActived) {
+                        // check if in LevelView 
+                        const allDiffGameObjects = findAllDiffGameObjects();
+
+                        {
+                            const pfun = patchlib.symbols.clearDiffs;
+                            if (pfun) {
+                                new NativeFunction(pfun, 'void', [])();
+                            }
+                        }
+
+                        allDiffGameObjects.forEach((obj: any) => {
+
+                            const x = obj.transform.screen_position.x;
+                            const y = obj.transform.screen_position.y;
+                            console.log(x, y, obj.name)
+
+                            {
+                                const pfun = patchlib.symbols.addDiff;
+                                if (pfun) {
+                                    new NativeFunction(pfun, 'void', ['int', 'int'])(
+                                        Math.floor(x),
+                                        Math.floor(y),
+                                    );
+                                }
+                            }
+                        })
+                        console.log(`updated diffs`)
+                        return;
+
+                    }
                 }
             }
 
-            allDiffGameObjects.forEach((obj: any) => {
-
-                const x = obj.transform.screen_position.x;
-                const y = obj.transform.screen_position.y;
-                console.log(x,y, obj.name)
-
-                {
-                    const pfun = patchlib.symbols.addDiff;
-                    if (pfun) {
-                        new NativeFunction(pfun, 'void', ['int', 'int'])(
-                            Math.floor(x),
-                            Math.floor(y),
-                        );
-                    }
-                }
-            })
+            console.log(`levelView is not activing `)
+            return 
         }
-
 
         if (patchlib.symbols.init!=undefined) {
             new NativeFunction(patchlib.symbols.init,'int',['int','int'])(width, height);
@@ -568,6 +593,8 @@ const il2cpp_main = ()=>{
         }
 
         hook_game();
+
+        // il2cpp_hook();
 
         // Il2Cpp.dump('Unity.dump.cs');
 
