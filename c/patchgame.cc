@@ -13,7 +13,6 @@
 struct Item {
     int x;
     int y;
-    std::string text;
 
 };
 
@@ -101,11 +100,10 @@ extern "C" __attribute__((visibility("default"))) int hookGL (int width, int hei
                         auto item = *it;
                         auto x = item.x;
                         auto y = item.y;
-                        auto* text = item.text.c_str();
-                        background->AddText(
-                            NULL, 32, ImVec2(x,screenHeight-y),
-                            ImGui::GetColorU32(ImGuiCol_Text),
-                            text
+                        background->AddCircleFilled(
+                            ImVec2(x,screenHeight-y),
+                            30.f,
+                            IM_COL32(255, 100, 100, 255) 
                         );
                     }
 
@@ -146,10 +144,10 @@ extern "C" __attribute__((visibility("default"))) void processInputEvent(AInputE
 }
 
 
-extern "C" __attribute__((visibility("default"))) void addItem (int x, int y, const char* text){
+extern "C" __attribute__((visibility("default"))) void addDiff (int x, int y){
 
     g_items.push_back({
-        x,y,text,
+        x,y
     });
     
 }

@@ -186,11 +186,12 @@ export const listGameObjects = (includeInactive:boolean=false) => {
             .inflate(UnityEngine_Component)
             .invoke() as Il2Cpp.Array;
 
-        if(visible){
-            const gameObject = parseGameObject(go);
-            //console.log(` GameObject: ${name} ${JSON.stringify(gameObject.transform.screen_position)}`);
-            allGameObjects.push(parseGameObject(go));
+        const gameObject = parseGameObject(go);
+        //if(visible)
+        {
+            allGameObjects.push(gameObject);
         }
+        // console.log(` GameObject: ${name} ${JSON.stringify(gameObject.transform.screen_position)}`);
     }
 
     return {
@@ -521,31 +522,37 @@ export const CheckVisibility = (obj:Il2Cpp.Object, depth:number = 0) => {
 
 const IsGameObjectVisible2D = (obj:Il2Cpp.Object):boolean =>{
 
-    const UnityeEngine_Renderer = C("UnityEngine.CoreModule","UnityEngine.Renderer");
-    const UnityEngine_Camera = C('UnityEngine.CoreModule',"UnityEngine.Camera");
+    const UnityeEngine_Renderer = C("UnityEngine.CoreModule", "UnityEngine.Renderer");
+    const UnityEngine_Camera = C('UnityEngine.CoreModule', "UnityEngine.Camera");
     const cam = UnityEngine_Camera.method('get_current').invoke() as Il2Cpp.Object;
 
     const name = (obj.method('get_name').invoke() as Il2Cpp.String).toString();
 
-    const UnityEngine_Component = C("UnityEngine.CoreModule",'UnityEngine.Component');
-    const components = obj
-        .method('GetComponents')
-        .overload()
-        .inflate(UnityEngine_Component)
-        .invoke() as Il2Cpp.Array;
-    for(const item of components) {
-        const component = item as Il2Cpp.Object;
-        const get_enabled = component.tryMethod('get_enabled');
-        if(get_enabled!=null) {
-            const enabled = get_enabled.invoke() as boolean;
-            if(enabled) {
+    // check activate
+    const activate = obj.method('get_active').invoke() as boolean;
+    if (activate) {
 
-                if(IsRendererVisibleFrom2D(component, cam)) 
-                    return true;
 
+        const UnityEngine_Component = C("UnityEngine.CoreModule", 'UnityEngine.Component');
+        const components = obj
+            .method('GetComponents')
+            .overload()
+            .inflate(UnityEngine_Component)
+            .invoke() as Il2Cpp.Array;
+        for (const item of components) {
+            const component = item as Il2Cpp.Object;
+            const get_enabled = component.tryMethod('get_enabled');
+            if (get_enabled != null) {
+                const enabled = get_enabled.invoke() as boolean;
+                if (enabled) {
+
+                    if (IsRendererVisibleFrom2D(component, cam))
+                        return true;
+
+                }
             }
-        }
 
+        }
     }
     return false;
 }

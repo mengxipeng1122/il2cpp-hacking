@@ -375,6 +375,41 @@ const testRay = () => {
 
 }
 
+const findAllDiffGameObjects = (patchlib: MyFrida.PATHLIB_INFO_TYPE) => {
+    const gameObjects = listGameObjects(true).allGameObjects;
+    for (const go of gameObjects) {
+
+        const x = go.transform.screen_position.x;
+        const y = go.transform.screen_position.y;
+        const name = go.name;
+
+
+        const regex = /"Diff[0-9]"/;
+
+        console.log(`${x} ${y} ${name} ${regex.test(name)}`)
+
+        if (regex.test(name)) {
+
+            console.log(`Diff :${name}`)
+
+            const pfun = patchlib.symbols.addDiff;
+
+            if (pfun) {
+                new NativeFunction(pfun, 'void', ['int', 'int'])(
+                    Math.floor(x),
+                    Math.floor(y),
+                );
+            }
+        }
+
+
+
+
+    }
+
+}
+
+
 const soname = 'libil2cpp.so'
 
     const _frida_log_callback = new NativeCallback(
@@ -469,6 +504,8 @@ const il2cpp_main = ()=>{
         console.log(`Unity Version: ${getUnityVersion()}`)
 
         // il2cpp_hook();
+
+        findAllDiffGameObjects(patchlib);
         
         // il2cpp_method_hook();
 
@@ -476,32 +513,6 @@ const il2cpp_main = ()=>{
 
         //console.log(`All game objects: ${JSON.stringify(listGameObjects())}`)
 
-        {
-            const gameObjects = listGameObjects(true).allGameObjects;
-            for(const go of gameObjects){
-
-                const x =go.transform.screen_position.x;
-                const y =go.transform.screen_position.y;
-                const name = go.name;
-                console.log(go, x,y, name)
-
-                if(name.includes('Btn')){
-
-                        if(patchlib.symbols.addItem){
-                            new NativeFunction(patchlib.symbols.addItem,'void',['int','int','pointer'])(
-                                Math.floor(x),
-                                Math.floor(y),
-                                Memory.allocUtf8String(name),
-                            );
-                        }
-                }
-                        
-
-            
-
-            }
-
-        }
 
         // dumpCurrentScene(true);
 
