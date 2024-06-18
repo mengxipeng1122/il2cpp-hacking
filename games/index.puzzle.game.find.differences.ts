@@ -560,8 +560,16 @@ const il2cpp_main = ()=>{
         // hook 
         const hook_game = ()=>{
 
+
+            let eglSwapBuffers : NativePointer | null = null;
+            if(eglSwapBuffers==null) eglSwapBuffers = Module.findExportByName('libGLES_mail','eglSwapBuffers');
+            if(eglSwapBuffers==null) eglSwapBuffers = Module.findExportByName('libGLESv3.so','eglSwapBuffers');
+            if(eglSwapBuffers==null)
+                throw new Error(`can not find function eglSwapBuffers`);
+
+
             const hooksForEGL : {p:NativePointer, name:string, opts:MyFrida.HookFunActionOptArgs} [] = [
-                {p:Module.getExportByName("libGLES_mali.so",'eglSwapBuffers'), name: 'eglSwapBuffers', opts:{
+                {p:eglSwapBuffers, name: 'eglSwapBuffers', opts:{
                     hide:true,
                     enterFun(args, tstr, thiz) {
                         if (patchlib.symbols.hookGL!=undefined) {
