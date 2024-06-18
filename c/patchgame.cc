@@ -92,7 +92,7 @@ extern "C" __attribute__((visibility("default"))) int hookGL (int width, int hei
                         background->AddCircleFilled(
                             ImVec2(x,screenHeight-y),
                             30.f,
-                            IM_COL32(255, 100, 100, 255) 
+                            IM_COL32(255, 100, 100, 155) 
                         );
                     }
 
