@@ -480,10 +480,15 @@ const il2cpp_main = ()=>{
                                 .invoke(UnityEngine_GameObject.type.object) as  Il2Cpp.Array;
                             for(const item of allGameObjectsArray){
                                 const go = item as Il2Cpp.Object; 
+                                const name = (go.method('get_name').invoke() as Il2Cpp.String).content;
                                 const obj = parseGameObject(go);
-                                if(obj.name.includes('Diff')){
-                                    console.log(`${obj.name}: ${go.toString()}`)
-                                    cb(obj.transform.screen_position.x, obj.transform.screen_position.y)
+                                if(name){
+                                    const regex = /Diff\d{1,2}/;
+                                    if(regex.test(name)) {
+                                        console.log(`${name}: ${go.toString()}`)
+                                        const {x,y} = obj.transform.screen_position;
+                                        cb(x,y);
+                                    }
                                 }
                             }
                         };
@@ -508,29 +513,43 @@ const il2cpp_main = ()=>{
 
                         };
 
-
-
-                        findDiffs0((x:number, y:number) => {
-
-                                if (1) {
-                                    const pfun = patchlib.symbols.addDiff;
-                                    if (pfun) {
-                                        new NativeFunction(pfun, 'void', ['int', 'int'])(
-                                            Math.floor(x),
-                                            Math.floor(y),
-                                        );
-                                    }
+                        const addDiff = (x: number, y: number) => {
+                            if (1) {
+                                const pfun = patchlib.symbols.addDiff;
+                                if (pfun) {
+                                    new NativeFunction(pfun, 'void', ['int', 'int'])(
+                                        Math.floor(x),
+                                        Math.floor(y),
+                                    );
                                 }
-                            });
+                            }
+                        };
 
-                        console.log(`updated diffs`)
+
+                        // findDiffs0(addDiff);
+                        findDiffs(addDiff);
+
+                        {
+                            const pfun = patchlib.symbols.getNumOfDiffs;
+                            if(pfun) {
+                                const cnt = new NativeFunction(pfun,'uint',[])();
+                                const msg = `Updated ${cnt} differences`;
+                                console.log(msg);
+                                MyFrida.showAndroidToast(msg);
+                            }
+                        }
+
                         return;
 
                     }
                 }
             }
 
-            console.log(`levelView is not activing `)
+            {
+                const msg = `levelView is not activing `
+                console.log(msg);
+                MyFrida.showAndroidToast(msg);
+            }
             return; 
         }
 

@@ -92,7 +92,7 @@ extern "C" __attribute__((visibility("default"))) int hookGL (int width, int hei
                         background->AddCircleFilled(
                             ImVec2(x,screenHeight-y),
                             30.f,
-                            IM_COL32(255, 100, 100, 155) 
+                            IM_COL32(255, 100, 100, 200) 
                         );
                     }
 
@@ -138,5 +138,8 @@ extern "C" __attribute__((visibility("default"))) void addDiff (int x, int y){
 
 extern "C" __attribute__((visibility("default"))) void clearDiffs (){
     g_allDiffPositions.clear();
-    
+}
+
+extern "C" __attribute__((visibility("default"))) size_t getNumOfDiffs (){
+    return g_allDiffPositions.size();
 }
