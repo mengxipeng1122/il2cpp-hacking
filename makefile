@@ -22,7 +22,7 @@ else
     TYPESCRIPT_FILE=games/index.$(GAME_PACKAGE_NAME).ts
 endif
 
-all: check_arch build_c convert_so 
+all: # check_arch build_c convert_so 
 	./node_modules/.bin/frida-compile ${TYPESCRIPT_FILE} -o _agent.js 
 
 convert_so:

@@ -587,3 +587,21 @@ export const hookIl2cppClassFuns = (clz:Il2Cpp.Class, opts:{[key:string]:MyFrida
         }))
     })
 }
+
+export const showIl2cppInstances = (obj:Il2Cpp.Object, showStaticFields:boolean=false) =>{
+
+    const clz = obj.class;
+
+    clz.fields
+        .forEach(f=>{
+            if(f.isStatic) {
+                if (showStaticFields){
+                    console.log(`static ${f.toString()} value: ${clz.field(f.name).value}`)
+                }
+            }
+            else {
+                console.log(`${f.toString()} value: ${obj.field(f.name).value}`)
+            }
+    });
+
+}
