@@ -19,23 +19,32 @@ import {
     parseTransform,
     parseCamera,
     parseGameObject,
+    hookIl2cppClassFuns,
 } from '../il2cppUtils.js'
+
+import {
+    AKEY_EVENT_A,
+    AKEY_EVENT_ACTION_DOWN,
+    AKEY_EVENT_B,
+
+} from '../AndroidUtils.js'
 
 import {
     mod as patchlibinfo,
 } from '../modinfos/libmodpatchgame.js'
-import { copyFileSync } from 'fs'
 
 const il2cpp_hook = ()=>{
     //const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
     const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
     const UnityEngine_UIElementsModule = Il2Cpp.domain.assembly('UnityEngine.UIElementsModule');
-    Il2Cpp.trace()
-        .assemblies(
-            Assembly_CSharp,
-        //    UnityEngine_UIElementsModule,
-        )
+    const DownLoadTask = C("Assembly-CSharp", "DownLoadTask");
+    Il2Cpp.trace(true)
+        // .assemblies(
+        //     Assembly_CSharp,
+        // //    UnityEngine_UIElementsModule,
+        // )
         // .filterMethods(m=>m.name.includes('ShowTip'))
+        .classes(DownLoadTask)
         .and()
         .attach()
 }
@@ -414,21 +423,36 @@ const findAllDiffGameObjects = () : any[] => {
 
 }
 
+const listAllLevels = ()=>{
+    const MainLevelManager = C("Assembly-CSharp",'MainLevelManager');
+    const mainLevelManager = MainLevelManager.method('get_Instance').invoke() as Il2Cpp.Object;
+    const maxLevel = mainLevelManager.method("get_MaxLevel").invoke() as number;
+    console.log(`Max level: ${maxLevel}`)
+
+    for(let n=0; n <maxLevel; n++) {
+        try {
+            const levelID = (mainLevelManager.method("GetLevelID").invoke(n + 1) as Il2Cpp.String).content;
+            if (levelID) {
+                if (levelID.includes('fyx')) {
+                    //const url = https://cdn3-dof.fungame.cloud/PicAssets/Android/10_fyx_230526_6_advertise?generation=1685621927374037&alt=media
+                    const url = `https://cdn3-dof.fungame.cloud/PicAssets/Android/${levelID}_advertise`;
+                    console.log(`${n}: ${levelID} ${url} `)
+                }
+            }
+        }
+        catch (e) {
+            console.warn(`can not get level of ${n + 1} : ${e}`)
+        }
+
+
+    }
+
+}
+
 
 const soname = 'libil2cpp.so'
 
-    const _frida_log_callback = new NativeCallback(
-    function (sp) {
-        const message = sp.readUtf8String();
-        console.log(message);
-        globalThis.console.log(message);
-    }, 
-    // Return type of the callback function.
-    'void', 
-    // Argument types of the callback function.
-    ['pointer']);
-
-const il2cpp_main = ()=>{
+const il2cpp_main_cheat_android = ()=>{
 
     const patchlib  = patchlibinfo.load(
         path.join('/data/local/tmp','libpatchgame.so'),
@@ -560,13 +584,15 @@ const il2cpp_main = ()=>{
         // hook 
         const hook_game = ()=>{
 
+            let libraryNames = ['libGLES_mail', 'libGLESv3.so', /* Other library names... */];
+            let eglSwapBuffers: NativePointer | null = null;
 
-            let eglSwapBuffers : NativePointer | null = null;
-            if(eglSwapBuffers==null) eglSwapBuffers = Module.findExportByName('libGLES_mail','eglSwapBuffers');
-            if(eglSwapBuffers==null) eglSwapBuffers = Module.findExportByName('libGLESv3.so','eglSwapBuffers');
-            if(eglSwapBuffers==null)
-                throw new Error(`can not find function eglSwapBuffers`);
+            for (let library of libraryNames) {
+                eglSwapBuffers = Module.findExportByName(library, 'eglSwapBuffers');
+                if (eglSwapBuffers) break;
+            }
 
+            if (!eglSwapBuffers) throw new Error('Cannot find function eglSwapBuffers');
 
             const hooksForEGL : {p:NativePointer, name:string, opts:MyFrida.HookFunActionOptArgs} [] = [
                 {p:eglSwapBuffers, name: 'eglSwapBuffers', opts:{
@@ -583,21 +609,6 @@ const il2cpp_main = ()=>{
                 Module.getExportByName('libandroid.so','AKeyEvent_getAction'),'uint',['pointer']);
             const AKeyEvent_getKeyCode= new NativeFunction(
                 Module.getExportByName('libandroid.so','AKeyEvent_getKeyCode'),'uint',['pointer']);
-
-            const AKEY_EVENT_ACTION_DOWN = 0;
-            const AKEY_EVENT_ACTION_UP   = 1;
-
-            const AKEY_EVENT_A  =  96;
-            const AKEY_EVENT_B  =  97;
-            const AKEY_EVENT_X  =  99;
-            const AKEY_EVENT_Y  = 100;
-            const AKEY_EVENT_START  =  109;
-            const AKEY_EVENT_SELECT =  109;
-            const AKEY_EVENT_L1 =  102;
-            const AKEY_EVENT_L2 =  104;
-            const AKEY_EVENT_R1 =  103;
-            const AKEY_EVENT_R2 =  105;
-
             const hooksForInputEvent : {p:NativePointer, name:string, opts:MyFrida.HookFunActionOptArgs} [] = [
                 {p:Module.getExportByName("libandroid.so",'_ZN7android32android_view_KeyEvent_fromNativeEP7_JNIEnvPKNS_8KeyEventE'), name: 'android::android_view_KeyEvent_fromNative', opts:{ 
 
@@ -686,10 +697,32 @@ const il2cpp_main = ()=>{
 
 
     })
+}
+
+const il2cpp_main = ()=>{
+
+    Il2Cpp.perform(()=>{
+
+        // il2cpp_hook();
+
+        listAllLevels();
+        // const clz = C ("Assembly-CSharp", "DownLoadTask");
+        // hookIl2cppClassFuns(clz, {
+        //    [clz.method('.ctor').virtualAddress.toString()] : {
+        //         nparas: 10, 
+        //         enterFun(args, tstr, thiz) {
+        //             const filePath = new Il2Cpp.String(args[1]);
+        //             const url = new Il2Cpp.String(args[2]);
+        //             console.log(`${tstr} filePath: ${filePath.content} url:${url.content}`)
+        //         },
+        //    },
+        // });
+
+    });
 
 }
 
 
 console.log('##################################################')
-Java.perform(il2cpp_main)
+Java.perform(il2cpp_main);
 

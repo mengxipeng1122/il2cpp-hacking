@@ -1,4 +1,5 @@
 
+import 'ts-frida'
 import 'frida-il2cpp-bridge'
 import * as path from 'path'
 
@@ -570,4 +571,19 @@ const IsGameObjectVisible2D = (obj:Il2Cpp.Object):boolean =>{
         }
     }
     return false;
+}
+
+// key is method address;
+export const hookIl2cppClassFuns = (clz:Il2Cpp.Class, opts:{[key:string]:MyFrida.HookFunActionOptArgs} = {}) =>{
+    clz.methods.forEach(m=>{
+        const p = m.virtualAddress;
+        const key = p.toString();
+        const name = m.toString() || p.toString();
+        const opt = (key in opts) ? opts[key] : {};
+        console.log(`hook ${name} at ${p} with ${JSON.stringify(opt)}`)
+        MyFrida.HookAction.addInstance(p, new MyFrida.HookFunAction({
+            ... opt,
+            name,
+        }))
+    })
 }
