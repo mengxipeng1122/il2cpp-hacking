@@ -12,6 +12,7 @@
         "frida-compile": "^16.4.1"
     },
     "dependencies": {
+        "bagbak": "^3.3.2",
         "frida-il2cpp-bridge": "^0.9.0",
         "ts-frida": "file:../ts-frida/ts-frida-1.0.5.tgz"
     }

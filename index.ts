@@ -46,7 +46,7 @@ const il2cpp_main = ()=>{
 
 const main = ()=>{
     Process.enumerateModules()
-        .filter(m=>m.name.includes('coco'))
+        // .filter(m=>m.name.includes('coco'))
         .forEach(m=>{
             console.log(JSON.stringify(m))
         })
@@ -72,6 +72,8 @@ if (ObjC.available) {
 
 // check 
 
-if(Java.available) Java.perform(il2cpp_main)
-else il2cpp_main()
+// if(Java.available) Java.perform(il2cpp_main)
+// else il2cpp_main()
+
+main();
 

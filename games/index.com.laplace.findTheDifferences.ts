@@ -13,6 +13,11 @@ import {
     showIl2cppInstances,
 } from '../il2cppUtils.js'
 
+const packageNames : {[key:string]:string} = {
+    iOS : 'com.Laplace-Games.Spot-The-Hidden-Differences-3D',
+    Android: 'com.laplace.findTheDifferences',
+}
+
 const il2cpp_hook = ()=>{
     const Assembly_CSharp = Il2Cpp.domain.assembly('Assembly-CSharp');
     Il2Cpp.trace()
@@ -86,12 +91,12 @@ if (ObjC.available) {
     
     // Convert Objective-C NSString to JavaScript string
     const packageName = bundleIdentifier.toString();
-    
-    console.log(`Package Name (Bundle Identifier): ${packageName}`);
+    if(packageNames.iOS !== packageName){
+        throw new Error(`Package name ${packageName} is not ${packageNames.iOS}, Please check`);
+    }
 } else {
     console.error('Objective-C runtime is not available.');
 }
-
 
 // check 
 

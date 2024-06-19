@@ -1,0 +1,8 @@
+
+ifeq ($(strip $(ABI)),)
+    $(error ABI is not defined. Please define it in env.mk)
+endif
+
+.PHONY: check_arch
+
+check_arch:

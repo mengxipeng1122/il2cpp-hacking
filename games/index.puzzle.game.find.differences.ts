@@ -452,6 +452,11 @@ const listAllLevels = ()=>{
 
 const soname = 'libil2cpp.so'
 
+interface global {
+    toggleShow: () => void;
+    updateDifferences: (mode:number) => void;
+}
+
 const il2cpp_main_cheat_android = ()=>{
 
     const patchlib  = patchlibinfo.load(
@@ -479,7 +484,14 @@ const il2cpp_main_cheat_android = ()=>{
         const { width, height } = getScreenResolution();
         console.log(`Screen resolution: ${width}x${height}`)
 
-        const updateDiffs = ()=> {
+        const toggleShow = () => {
+            const pfun = patchlib.symbols.toggleShow;
+            if (pfun) {
+                new NativeFunction(pfun, 'void', [])();
+            }
+        }
+
+        const updateDifferences = (mode: number = 0) => {
             {
                 const pfun = patchlib.symbols.clearDiffs;
                 if (pfun) {
@@ -550,8 +562,17 @@ const il2cpp_main_cheat_android = ()=>{
                         };
 
 
-                        // findDiffs0(addDiff);
-                        findDiffs(addDiff);
+                        switch (mode) {
+                            case 0:
+                                findDiffs0(addDiff);
+                                break;
+                            case 1:
+                                findDiffs(addDiff);
+                                break;
+                            default:
+                                throw new Error(`unknown mode ${mode}`);
+                                break;
+                        }
 
                         {
                             const pfun = patchlib.symbols.getNumOfDiffs;
@@ -576,6 +597,7 @@ const il2cpp_main_cheat_android = ()=>{
             }
             return; 
         }
+
 
         if (patchlib.symbols.init!=undefined) {
             new NativeFunction(patchlib.symbols.init,'int',['int','int'])(width, height);
@@ -625,16 +647,13 @@ const il2cpp_main_cheat_android = ()=>{
                                 switch(keyCode){
                                     case AKEY_EVENT_A: {
                                         // toggle show
-                                        const pfun = patchlib.symbols.toggleShow;
-                                        if(pfun){
-                                            new NativeFunction(pfun, 'void',[])();
-                                        }
+                                        toggleShow();
                                     }
                                     break;
 
                                     case AKEY_EVENT_B: {
                                         // update diff list
-                                        updateDiffs ();
+                                        updateDifferences ();
                                     }
                                     break;
                                 }
@@ -672,7 +691,7 @@ const il2cpp_main_cheat_android = ()=>{
 
         console.log(`Unity Version: ${getUnityVersion()}`)
 
-        updateDiffs ();
+        updateDifferences ();
 
         // il2cpp_method_hook();
 
@@ -694,6 +713,9 @@ const il2cpp_main_cheat_android = ()=>{
         // dumpApplication();
 
         // parseCamera();
+
+        (globalThis as any).updateDifferences = updateDifferences;
+        (globalThis as any).toggleShow        = toggleShow;
 
 
     })
@@ -724,5 +746,5 @@ const il2cpp_main = ()=>{
 
 
 console.log('##################################################')
-Java.perform(il2cpp_main);
+Java.perform(il2cpp_main_cheat_android);
 
