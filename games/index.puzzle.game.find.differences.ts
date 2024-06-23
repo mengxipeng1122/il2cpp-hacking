@@ -723,28 +723,100 @@ const il2cpp_main_cheat_android = ()=>{
 
 const il2cpp_main = ()=>{
 
-    Il2Cpp.perform(()=>{
+    // Il2Cpp.perform(()=>{
 
-        // il2cpp_hook();
+    //     // Il2Cpp.dump('Unity.dump.cs');
 
-        listAllLevels();
-        // const clz = C ("Assembly-CSharp", "DownLoadTask");
-        // hookIl2cppClassFuns(clz, {
-        //    [clz.method('.ctor').virtualAddress.toString()] : {
-        //         nparas: 10, 
-        //         enterFun(args, tstr, thiz) {
-        //             const filePath = new Il2Cpp.String(args[1]);
-        //             const url = new Il2Cpp.String(args[2]);
-        //             console.log(`${tstr} filePath: ${filePath.content} url:${url.content}`)
-        //         },
-        //    },
-        // });
+    //     // console.log(`Il2cpp Version: ${Il2Cpp.unityVersion}`)
 
-    });
+    //     // il2cpp_hook();
+
+    //     // listAllLevels();
+    //     // const clz = C ("Assembly-CSharp", "DownLoadTask");
+    //     // hookIl2cppClassFuns(clz, {
+    //     //    [clz.method('.ctor').virtualAddress.toString()] : {
+    //     //         nparas: 10, 
+    //     //         enterFun(args, tstr, thiz) {
+    //     //             const filePath = new Il2Cpp.String(args[1]);
+    //     //             const url = new Il2Cpp.String(args[2]);
+    //     //             console.log(`${tstr} filePath: ${filePath.content} url:${url.content}`)
+    //     //         },
+    //     //    },
+    //     // });
+
+    // });
+
+}
+
+const native_test_main = ()=>{
+
+
+    console.log(JSON.stringify(MyFrida.getELFInfoInModule('libil2cpp.so')))
+    const patchlib = patchlibinfo.load('/data/local/tmp/libpatchgame.so', [
+        'libil2cpp.so',
+        ],
+        {
+            ... MyFrida.frida_symtab,
+            pICallMap : Process.getModuleByName('libil2cpp.so').base.add(0x4323108).sub(0x100000),
+        }
+    )
+
+    if(1) {
+        const p = patchlib.symbols.init;
+        if(p){
+            new NativeFunction(p, 'int', [])();
+        }
+    }
+
+    if (0) {
+        const soname = 'libil2cpp.so'
+        console.log('ok')
+
+        const hooks: {
+            p: NativePointer,
+            name: string,
+            opts: MyFrida.HookFunActionOptArgs,
+        }[] = [
+                {
+                    p: Module.getExportByName(null, 'dlopen'), name: 'dlopen', opts: {
+                        hide: true,
+                        enterFun(args, tstr, thiz) {
+                            const soname = path.basename(args[0].readUtf8String() || '')
+                            console.log(tstr, `soname: ${soname}`)
+                        },
+                    }
+                }
+            ];
+
+        [
+            // ... hooks,
+        ].forEach((h: {
+            p: NativePointer,
+            name: string,
+            opts: MyFrida.HookFunActionOptArgs,
+        }) => {
+            console.log(`hook ${h.name} ${JSON.stringify(h.opts)}`)
+            const { p, name, opts } = h;
+            MyFrida.HookAction.addInstance(p, new MyFrida.HookFunAction({
+                ...opts,
+                name,
+            }))
+        })
+
+        const m = Process.getModuleByName('libunity.so');
+        console.log(m, m.path)
+
+        const p = Process.getModuleByName('libil2cpp.so').base.add(0x0411e580).sub(0x100000);
+        MyFrida.dumpMemory(p,);
+        MyFrida.dumpMemory(p.readPointer(),);
+    }
+
 
 }
 
 
 console.log('##################################################')
-Java.perform(il2cpp_main_cheat_android);
+// Java.perform(il2cpp_main_cheat_android);
+// Java.perform(il2cpp_main);
+Java.perform(native_test_main)
 

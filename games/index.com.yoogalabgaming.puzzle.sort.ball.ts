@@ -4,7 +4,7 @@ import 'frida-il2cpp-bridge'
 import "ts-frida"
 
 import {
-    c,
+    C,
     dumpCurrentScene,
     dumpScenes,
     findObjects,
@@ -73,7 +73,7 @@ const parsePlayerProgress = (playerProgress:Il2Cpp.Object)=>{
 }
 
 const dumpGameController = ()=>{
-    const CodeBase_GameCore_Game_GameController = c('Assembly-CSharp', 'CodeBase.GameCore.Game.GameController'); 
+    const CodeBase_GameCore_Game_GameController = C('Assembly-CSharp', 'CodeBase.GameCore.Game.GameController'); 
 
     const GameController = findObjects(CodeBase_GameCore_Game_GameController, true);
     

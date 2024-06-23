@@ -2,6 +2,7 @@
 
 #include <android/input.h>
 #include <string>
+#include <map>
 #include <vector>
 
 #include "utils.h"
@@ -142,4 +143,24 @@ extern "C" __attribute__((visibility("default"))) void clearDiffs (){
 
 extern "C" __attribute__((visibility("default"))) size_t getNumOfDiffs (){
     return g_allDiffPositions.size();
+}
+
+extern std::map<std::string,void*> pICallMap;
+
+void dumpIlcalls () {
+
+    LOG_INFOS("dumpIlcalls %p ", &pICallMap);
+    LOG_INFOS("dumpIlcalls %d ", (pICallMap).size());
+    for(auto it = pICallMap.begin(); it!=pICallMap.end(); it++){
+        auto& name = it->first;
+        auto& funp = it->second;
+        LOG_INFOS("dumpIlcalls %s %p ", name.c_str(), funp);
+    }
+    
+}
+
+extern "C" __attribute__((visibility("default"))) int init (){
+    LOG_INFOS("gohere");
+    dumpIlcalls();
+    return 0;
 }
