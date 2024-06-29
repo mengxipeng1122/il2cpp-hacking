@@ -748,7 +748,7 @@ const il2cpp_main = ()=>{
 
 }
 
-const native_test_main = ()=>{
+const native_test_main_0 = ()=>{
 
 
     console.log(JSON.stringify(MyFrida.getELFInfoInModule('libil2cpp.so')))
@@ -761,7 +761,7 @@ const native_test_main = ()=>{
         }
     )
 
-    if(1) {
+    if(0) {
         const p = patchlib.symbols.init;
         if(p){
             new NativeFunction(p, 'int', [])();
@@ -811,9 +811,95 @@ const native_test_main = ()=>{
         MyFrida.dumpMemory(p.readPointer(),);
     }
 
+    Il2Cpp.perform(()=>{
+        console.log(`Unity version: ${Il2Cpp.unityVersion}`)
+    });
+
 
 }
 
+const native_test_main= ()=>{
+    const sonames = [
+        'libil2cpp.so',
+        'libunity.so',
+    ];
+
+    if (0) {
+        Process.setExceptionHandler(function (exception) {
+            console.log(JSON.stringify(exception))
+
+        });
+    }
+    if (0) {
+        console.log(JSON.stringify(MyFrida.getELFInfoInModule(sonames[0])))
+    }
+    if(0){
+        Il2Cpp.perform(()=>{
+            console.log(`Unity version: ${Il2Cpp.unityVersion}`)
+        })
+    }
+    if(1){
+
+        const sohooks :{[key:string]:{
+            offset: NativePointer|string,
+            name: string,
+            opts: MyFrida.HookFunActionOptArgs,
+        }[] } = {
+            'libil2cpp.so' : [],
+            'libunity.so' : [
+                {
+                    offset:ptr(0x00d11dfc),
+                    name: 'scripting_method_invoke(ScriptingMethodPtr, ScriptingObjectPtr, ScriptingArguments&, ScriptingExceptionPtr*, bool)',
+                    opts:{},
+                },
+                {
+                    offset:ptr(0x013283b0),
+                    name: 'unwindstack::Memory::ReadFully',
+                    opts:{},
+                },
+            ],
+
+        }
+
+        Interceptor.attach(Module.getExportByName(null,'dlopen'), {
+            onEnter(args) {
+                const soname = path.basename(args[0].readUtf8String() || '')
+                console.log(`soname: ${soname}`)
+                this.soname = soname
+            },
+            onLeave(retval) {
+                if(retval.isNull()) return ;
+                console.log(`soname: ${this.soname}`)
+                if(sohooks[this.soname] != undefined){
+
+                    const _soname =  this.soname;
+
+                    const hooks = sohooks[_soname];
+
+                    hooks.forEach((h: {
+                        offset: NativePointer|string,
+                        name: string,
+                        opts: MyFrida.HookFunActionOptArgs,
+                    }) => {
+                        console.log(`hook ${h.name} ${JSON.stringify(h.opts)}`)
+                        const { offset: offset, name, opts } = h;
+                        const p = 
+                            (typeof offset==='string')?
+                            Module.getExportByName(_soname,offset):
+                            Process.getModuleByName(_soname).base.add(offset).sub(0x100000);
+                        MyFrida.HookAction.addInstance(p, new MyFrida.HookFunAction({
+                            ...opts,
+                            name,
+                        }))
+                    })
+                }
+            },
+        })
+
+    }
+
+
+}
 
 console.log('##################################################')
 // Java.perform(il2cpp_main_cheat_android);
